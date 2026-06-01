@@ -1,6 +1,8 @@
 package zen
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -113,5 +115,38 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 	}
 	if strings.Contains(body, "/@vite/client") {
 		t.Fatalf("production body should not include vite dev client: %s", body)
+	}
+}
+
+func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := filepath.Join(dir, "manifest.json")
+
+	err := os.WriteFile(manifestPath, []byte(`{
+		"src/entry-client.tsx": {
+			"file": "assets/entry-client.js"
+		}
+	}`), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := New(Config{
+		Dev:        false,
+		ClientDist: dir,
+		Manifest:   manifestPath,
+		SSRCommand: []string{
+			"node",
+			"../js/ssr-worker.mjs",
+			"--entry",
+			"../js/fixtures/entry-server-ok.mjs",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if r.ssr == nil {
+		t.Fatal("expected production ssr client")
 	}
 }
