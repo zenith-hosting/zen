@@ -1,7 +1,6 @@
 package zen
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +20,14 @@ func TestNewRendererAppliesDefaults(t *testing.T) {
 
 	if r.config.ViteURL != "http://localhost:5173" {
 		t.Fatalf("expected default vite url, got %q", r.config.ViteURL)
+	}
+
+	if r.config.RenderURL != "http://localhost:5173/__zen/render" {
+		t.Fatalf("expected default render url, got %q", r.config.RenderURL)
+	}
+
+	if r.ssr == nil {
+		t.Fatal("expected renderer to create ssr client")
 	}
 }
 
@@ -119,7 +126,7 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 	}
 }
 
-func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
+func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := filepath.Join(dir, "manifest.json")
 
@@ -134,14 +141,9 @@ func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
 
 	r, err := New(Config{
 		Dev:        false,
+		RenderURL:  "http://127.0.0.1:4174/__zen/render",
 		ClientDist: dir,
 		Manifest:   manifestPath,
-		SSRCommand: []string{
-			"node",
-			"../js/ssr-worker.mjs",
-			"--entry",
-			"../js/fixtures/entry-server-ok.mjs",
-		},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -149,60 +151,6 @@ func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
 
 	if r.ssr == nil {
 		t.Fatal("expected production ssr client")
-	}
-}
-
-type closeTrackingSSRClient struct {
-	closed bool
-}
-
-func (c *closeTrackingSSRClient) Render(ctx context.Context, req ssrRequest) (ssrResponse, error) {
-	return ssrResponse{HTML: ""}, nil
-}
-
-func (c *closeTrackingSSRClient) Close() error {
-	c.closed = true
-	return nil
-}
-
-func TestRendererCloseClosesSSRClient(t *testing.T) {
-	client := &closeTrackingSSRClient{}
-
-	r := &Renderer{
-		config: Config{
-			Dev: true,
-		},
-		ssr: client,
-	}
-
-	err := r.Close()
-	if err != nil {
-		t.Fatalf("unexpected close error: %v", err)
-	}
-
-	if !client.closed {
-		t.Fatal("expected SSR client to be closed")
-	}
-}
-
-func TestNewRendererCreatesDevSSRClientWhenCommandProvided(t *testing.T) {
-	r, err := New(Config{
-		Dev:     true,
-		ViteURL: "http://localhost:5173",
-		SSRCommand: []string{
-			"node",
-			"../js/ssr-worker.mjs",
-			"--entry",
-			"../js/fixtures/entry-server-ok.mjs",
-		},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	defer r.Close()
-
-	if r.ssr == nil {
-		t.Fatal("expected dev ssr client when SSRCommand is provided")
 	}
 }
 
