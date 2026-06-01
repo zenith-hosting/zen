@@ -3,3 +3,5 @@ node_modules/
 dist/
 bin/
 examples/basic/basic
+examples/todo/todo
+main

@@ -66,7 +66,7 @@ func main() {
 	app := fiber.New()
 	app.Use(logger.New())
 
-	dev := os.Getenv("ZEN_ENV") != "production"
+	dev := os.Getenv("ZEN_ENV") != "prod"
 
 	cfg := zen.Config{
 		Dev:           dev,

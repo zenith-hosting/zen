@@ -1,0 +1,125 @@
+package zencli
+
+import (
+	"context"
+	"io"
+	"os"
+	"os/exec"
+	"strconv"
+)
+
+type ProcessCommand struct {
+	Name string
+	Args []string
+	Dir  string
+	Env  []string
+}
+
+type ManagedProcess struct {
+	Name    string
+	Command ProcessCommand
+	Stdout  io.Writer
+	Stderr  io.Writer
+}
+
+func (p ManagedProcess) Run(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, p.Command.Name, p.Command.Args...)
+	cmd.Dir = p.Command.Dir
+	cmd.Env = append(os.Environ(), p.Command.Env...)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	done := make(chan error, 2)
+
+	go func() {
+		done <- prefixLines(stdout, p.Stdout, p.Name)
+	}()
+
+	go func() {
+		done <- prefixLines(stderr, p.Stderr, p.Name)
+	}()
+
+	waitErr := cmd.Wait()
+
+	for i := 0; i < 2; i++ {
+		if err := <-done; err != nil {
+			return err
+		}
+	}
+
+	return waitErr
+}
+
+func shellCommand(command string) ProcessCommand {
+	return ProcessCommand{
+		Name: "sh",
+		Args: []string{"-c", command},
+	}
+}
+
+func airCommand(cfg Config) ProcessCommand {
+	cmd := shellCommand(cfg.AirCommand)
+	cmd.Env = []string{"ZEN_ENV=dev"}
+	return cmd
+}
+
+func goProdCommand(cfg Config) ProcessCommand {
+	cmd := shellCommand(cfg.BinaryPath)
+	cmd.Env = []string{"ZEN_ENV=prod"}
+	return cmd
+}
+
+func devRendererCommand(cfg Config) ProcessCommand {
+	return ProcessCommand{
+		Name: "node",
+		Args: []string{
+			"js/dev-renderer.mjs",
+			"--root",
+			cfg.FrontendDir,
+			"--entry",
+			"/src/entry-server.tsx",
+			"--host",
+			"127.0.0.1",
+			"--port",
+			strconv.Itoa(cfg.DevRendererPort),
+		},
+	}
+}
+
+func prodRendererCommand(cfg Config) ProcessCommand {
+	return ProcessCommand{
+		Name: "node",
+		Args: []string{
+			"js/prod-renderer.mjs",
+			"--entry",
+			cfg.FrontendDir + "/dist/server/entry-server.js",
+			"--host",
+			"127.0.0.1",
+			"--port",
+			strconv.Itoa(cfg.ProdRendererPort),
+		},
+	}
+}
+
+func frontendBuildCommand(cfg Config) ProcessCommand {
+	return ProcessCommand{
+		Name: "pnpm",
+		Args: []string{"--dir", cfg.FrontendDir, "build"},
+	}
+}
+
+func goBuildCommand(cfg Config) ProcessCommand {
+	return shellCommand("go build -o " + cfg.BinaryPath + " .")
+}

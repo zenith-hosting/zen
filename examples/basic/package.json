@@ -3,10 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm dev:renderer & go run .",
-    "dev:renderer": "node ../../js/dev-renderer.mjs --root ./frontend --entry /src/entry-server.tsx --host 127.0.0.1 --port 5173",
-    "build": "pnpm --dir frontend build && go build -o ./bin/basic .",
-    "start": "ZEN_ENV=production ./bin/basic",
-    "start:renderer": "node ../../js/prod-renderer.mjs --entry ./frontend/dist/server/entry-server.js --host 127.0.0.1 --port 4174"
+    "dev": "zen dev",
+    "build": "zen build",
+    "start": "ZEN_ENV=prod zen dev",
+    "check": "zen check"
   }
 }
