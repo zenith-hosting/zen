@@ -205,3 +205,27 @@ func TestNewRendererCreatesDevSSRClientWhenCommandProvided(t *testing.T) {
 		t.Fatal("expected dev ssr client when SSRCommand is provided")
 	}
 }
+
+func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			ViteURL:       "http://localhost:5173",
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: nil,
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Home", map[string]string{})
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+
+	if res.StatusCode == fiber.StatusOK {
+		t.Fatal("expected non-200 status when renderer has no ssr client")
+	}
+}

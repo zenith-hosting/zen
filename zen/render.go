@@ -2,6 +2,7 @@ package zen
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -68,6 +69,10 @@ func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...Render
 
 	for _, option := range options {
 		option(&opts)
+	}
+
+	if r.ssr == nil {
+		return errors.New("zen: renderer has no SSR client; set Config.SSRCommand or inject an SSR client in tests")
 	}
 
 	ctx := context.Background()
