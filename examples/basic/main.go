@@ -67,7 +67,7 @@ func main() {
 			return c.Status(fiber.StatusBadRequest).SendString("name is required")
 		}
 
-		return c.Redirect("/")
+		return c.Redirect().To("/")
 	})
 
 	log.Fatal(app.Listen(":3000"))

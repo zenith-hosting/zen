@@ -1,0 +1,10 @@
+{
+  "name": "zen-basic-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --dir frontend dev & go run .",
+    "build": "pnpm --dir frontend build && go build -o ./bin/basic .",
+    "start": "ZEN_ENV=production ./bin/basic"
+  }
+}
