@@ -1,0 +1,16 @@
+{
+  "name": "@zenith/zen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "go test ./... && node --test js/*.test.mjs",
+    "test:go": "go test ./...",
+    "test:js": "node --test js/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "vite": "^7.0.0",
+    "preact": "^10.0.0",
+    "preact-render-to-string": "^6.0.0"
+  }
+}
