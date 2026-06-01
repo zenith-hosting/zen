@@ -1,0 +1,12 @@
+{
+  "name": "zen-todo-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm dev:renderer & go run .",
+    "dev:renderer": "node ../../js/dev-renderer.mjs --root ./frontend --entry /src/entry-server.tsx --host 127.0.0.1 --port 5174",
+    "build": "pnpm --dir frontend build && go build -o ./bin/todo .",
+    "start": "ZEN_ENV=production ./bin/todo",
+    "start:renderer": "node ../../js/prod-renderer.mjs --entry ./frontend/dist/server/entry-server.js --host 127.0.0.1 --port 4175"
+  }
+}
