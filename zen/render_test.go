@@ -1,10 +1,14 @@
 package zen
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/zenith/zen/internal/testutil"
@@ -175,5 +179,45 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 
 	if res.StatusCode == fiber.StatusOK {
 		t.Fatal("expected non-200 status when renderer has no ssr client")
+	}
+}
+
+func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+
+		_ = json.NewEncoder(w).Encode(httpRendererErrorResponse{
+			Error: httpRendererError{
+				Message: "renderer exploded",
+			},
+		})
+	}))
+	defer server.Close()
+
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			ViteURL:       "http://localhost:5173",
+			RenderURL:     server.URL,
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: newHTTPSSRClient(httpSSRClientConfig{
+			RenderURL: server.URL,
+			Timeout:   time.Second,
+		}),
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Home", map[string]string{})
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+
+	if res.StatusCode == fiber.StatusOK {
+		t.Fatal("expected non-200 response")
 	}
 }
