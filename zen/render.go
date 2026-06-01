@@ -47,7 +47,9 @@ func New(config Config) (*Renderer, error) {
 			return nil, err
 		}
 		r.manifest = manifest
+	}
 
+	if len(cfg.SSRCommand) > 0 {
 		client, err := newProcessSSRClient(cfg.SSRCommand)
 		if err != nil {
 			return nil, err

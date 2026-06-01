@@ -184,3 +184,24 @@ func TestRendererCloseClosesSSRClient(t *testing.T) {
 		t.Fatal("expected SSR client to be closed")
 	}
 }
+
+func TestNewRendererCreatesDevSSRClientWhenCommandProvided(t *testing.T) {
+	r, err := New(Config{
+		Dev:     true,
+		ViteURL: "http://localhost:5173",
+		SSRCommand: []string{
+			"node",
+			"../js/ssr-worker.mjs",
+			"--entry",
+			"../js/fixtures/entry-server-ok.mjs",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer r.Close()
+
+	if r.ssr == nil {
+		t.Fatal("expected dev ssr client when SSRCommand is provided")
+	}
+}

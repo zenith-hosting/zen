@@ -42,3 +42,16 @@ func TestConfigValidateDevRequiresViteURL(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 }
+
+func TestConfigValidateDevAllowsSSRCommand(t *testing.T) {
+	cfg := Config{
+		Dev:        true,
+		ViteURL:    "http://localhost:5173",
+		SSRCommand: []string{"node", "js/ssr-worker.mjs", "--entry", "frontend/src/entry-server.tsx"},
+	}
+
+	err := cfg.withDefaults().validate()
+	if err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+}
