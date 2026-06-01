@@ -119,3 +119,20 @@ func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...Render
 	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
 	return c.Status(opts.Status).SendString(doc)
 }
+
+type closeableSSRClient interface {
+	Close() error
+}
+
+func (r *Renderer) Close() error {
+	if r.ssr == nil {
+		return nil
+	}
+
+	closeable, ok := r.ssr.(closeableSSRClient)
+	if !ok {
+		return nil
+	}
+
+	return closeable.Close()
+}

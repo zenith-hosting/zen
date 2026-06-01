@@ -1,6 +1,7 @@
 package zen
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,5 +149,38 @@ func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
 
 	if r.ssr == nil {
 		t.Fatal("expected production ssr client")
+	}
+}
+
+type closeTrackingSSRClient struct {
+	closed bool
+}
+
+func (c *closeTrackingSSRClient) Render(ctx context.Context, req ssrRequest) (ssrResponse, error) {
+	return ssrResponse{HTML: ""}, nil
+}
+
+func (c *closeTrackingSSRClient) Close() error {
+	c.closed = true
+	return nil
+}
+
+func TestRendererCloseClosesSSRClient(t *testing.T) {
+	client := &closeTrackingSSRClient{}
+
+	r := &Renderer{
+		config: Config{
+			Dev: true,
+		},
+		ssr: client,
+	}
+
+	err := r.Close()
+	if err != nil {
+		t.Fatalf("unexpected close error: %v", err)
+	}
+
+	if !client.closed {
+		t.Fatal("expected SSR client to be closed")
 	}
 }
