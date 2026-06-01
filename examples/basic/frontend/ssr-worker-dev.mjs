@@ -1,12 +1,27 @@
 import fs from "node:fs";
-import { createServer } from "vite";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const vite = await createServer({
-  server: {
-    middlewareMode: true
-  },
-  appType: "custom"
-});
+const here = dirname(fileURLToPath(import.meta.url));
+
+let vite;
+
+async function getVite() {
+  if (!vite) {
+    const { createServer } = await import("vite");
+
+    vite = await createServer({
+      root: here,
+      server: {
+        hmr: false,
+        middlewareMode: true
+      },
+      appType: "custom"
+    });
+  }
+
+  return vite;
+}
 
 async function handleLine(line) {
   if (!line.trim()) {
@@ -26,7 +41,8 @@ async function handleLine(line) {
   }
 
   try {
-    const mod = await vite.ssrLoadModule("/src/entry-server.tsx");
+    const server = await getVite();
+    const mod = await server.ssrLoadModule("/src/entry-server.tsx");
 
     if (typeof mod.render !== "function") {
       throw new Error("SSR entry must export render(request)");
@@ -39,7 +55,9 @@ async function handleLine(line) {
       result
     }) + "\n");
   } catch (error) {
-    vite.ssrFixStacktrace(error);
+    if (vite) {
+      vite.ssrFixStacktrace(error);
+    }
 
     process.stdout.write(JSON.stringify({
       id: incoming.id,
