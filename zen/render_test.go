@@ -1,6 +1,12 @@
 package zen
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/zenith/zen/internal/testutil"
+)
 
 func TestNewRendererAppliesDefaults(t *testing.T) {
 	r, err := New(Config{
@@ -21,5 +27,47 @@ func TestNewRendererRejectsInvalidProductionConfig(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected validation error")
+	}
+}
+
+func TestRenderWritesSSRDocumentToFiberResponse(t *testing.T) {
+	client := &fakeSSRClient{
+		res: ssrResponse{
+			HTML: `<main><h1>Hello</h1></main>`,
+		},
+	}
+
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			ViteURL:       "http://localhost:5173",
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: client,
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Home", map[string]string{
+			"title": "Hello",
+		})
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+	body := testutil.ReadBody(t, res)
+
+	if res.StatusCode != 200 {
+		t.Fatalf("expected status 200, got %d", res.StatusCode)
+	}
+	if !strings.Contains(body, `<main><h1>Hello</h1></main>`) {
+		t.Fatalf("body missing ssr html: %s", body)
+	}
+	if !strings.Contains(body, `"page":"Home"`) {
+		t.Fatalf("body missing hydration page: %s", body)
+	}
+	if !strings.Contains(body, `http://localhost:5173/@vite/client`) {
+		t.Fatalf("body missing Vite dev client: %s", body)
 	}
 }
