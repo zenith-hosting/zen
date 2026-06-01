@@ -5,7 +5,8 @@
   "scripts": {
     "test": "go test ./... && node --test js/*.test.mjs",
     "test:go": "go test ./...",
-    "test:js": "node --test js/*.test.mjs"
+    "test:js": "node --test js/*.test.mjs",
+    "test:example-build": "pnpm --dir examples/basic/frontend build && cd examples/basic && go build ."
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
