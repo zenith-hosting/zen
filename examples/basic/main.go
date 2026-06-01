@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/logger"
@@ -16,27 +17,18 @@ func main() {
 
 	dev := os.Getenv("ZEN_ENV") != "production"
 
-	ssrCommand := []string{
-		"node",
-		"./frontend/ssr-worker-dev.mjs",
+	cfg := zen.Config{
+		Dev:           dev,
+		ViteURL:       "http://localhost:5173",
+		RenderURL:     "http://localhost:5173/__zen/render",
+		ClientDist:    "./frontend/dist/client",
+		Manifest:      "./frontend/dist/client/.vite/manifest.json",
+		DefaultTitle:  "Zen Basic Example",
+		RenderTimeout: 5 * time.Second,
 	}
 
 	if !dev {
-		ssrCommand = []string{
-			"node",
-			"../../js/ssr-worker.mjs",
-			"--entry",
-			"./frontend/dist/server/entry-server.js",
-		}
-	}
-
-	cfg := zen.Config{
-		Dev:          dev,
-		ViteURL:      "http://localhost:5173",
-		SSRCommand:   ssrCommand,
-		ClientDist:   "./frontend/dist/client",
-		Manifest:     "./frontend/dist/client/.vite/manifest.json",
-		DefaultTitle: "Zen Basic Example",
+		cfg.RenderURL = "http://127.0.0.1:4174/__zen/render"
 	}
 
 	renderer, err := zen.New(cfg)
@@ -52,7 +44,7 @@ func main() {
 	app.Get("/", func(c fiber.Ctx) error {
 		return renderer.Render(c, "Home", map[string]any{
 			"title": "Zen Basic Example",
-			"body":  "Fiber route, Preact page, Vite build. No ceremony.",
+			"body":  "Fiber route, Preact page, Vite renderer. No pipe slop.",
 		}, zen.WithTitle("Home"))
 	})
 

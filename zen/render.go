@@ -40,6 +40,10 @@ func New(config Config) (*Renderer, error) {
 
 	r := &Renderer{
 		config: cfg,
+		ssr: newHTTPSSRClient(httpSSRClientConfig{
+			RenderURL: cfg.RenderURL,
+			Timeout:   cfg.RenderTimeout,
+		}),
 	}
 
 	if !cfg.Dev {
@@ -48,14 +52,6 @@ func New(config Config) (*Renderer, error) {
 			return nil, err
 		}
 		r.manifest = manifest
-	}
-
-	if len(cfg.SSRCommand) > 0 {
-		client, err := newProcessSSRClient(cfg.SSRCommand)
-		if err != nil {
-			return nil, err
-		}
-		r.ssr = client
 	}
 
 	return r, nil
@@ -72,7 +68,7 @@ func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...Render
 	}
 
 	if r.ssr == nil {
-		return errors.New("zen: renderer has no SSR client; set Config.SSRCommand or inject an SSR client in tests")
+		return errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
 	}
 
 	ctx := context.Background()
@@ -127,19 +123,6 @@ func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...Render
 	return c.Status(opts.Status).SendString(doc)
 }
 
-type closeableSSRClient interface {
-	Close() error
-}
-
 func (r *Renderer) Close() error {
-	if r.ssr == nil {
-		return nil
-	}
-
-	closeable, ok := r.ssr.(closeableSSRClient)
-	if !ok {
-		return nil
-	}
-
-	return closeable.Close()
+	return nil
 }

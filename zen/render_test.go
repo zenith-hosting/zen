@@ -1,11 +1,14 @@
 package zen
 
 import (
-	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/zenith/zen/internal/testutil"
@@ -21,6 +24,14 @@ func TestNewRendererAppliesDefaults(t *testing.T) {
 
 	if r.config.ViteURL != "http://localhost:5173" {
 		t.Fatalf("expected default vite url, got %q", r.config.ViteURL)
+	}
+
+	if r.config.RenderURL != "http://localhost:5173/__zen/render" {
+		t.Fatalf("expected default render url, got %q", r.config.RenderURL)
+	}
+
+	if r.ssr == nil {
+		t.Fatal("expected renderer to create ssr client")
 	}
 }
 
@@ -119,7 +130,7 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 	}
 }
 
-func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
+func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := filepath.Join(dir, "manifest.json")
 
@@ -134,14 +145,9 @@ func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
 
 	r, err := New(Config{
 		Dev:        false,
+		RenderURL:  "http://127.0.0.1:4174/__zen/render",
 		ClientDist: dir,
 		Manifest:   manifestPath,
-		SSRCommand: []string{
-			"node",
-			"../js/ssr-worker.mjs",
-			"--entry",
-			"../js/fixtures/entry-server-ok.mjs",
-		},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -149,60 +155,6 @@ func TestNewRendererCreatesProductionSSRClient(t *testing.T) {
 
 	if r.ssr == nil {
 		t.Fatal("expected production ssr client")
-	}
-}
-
-type closeTrackingSSRClient struct {
-	closed bool
-}
-
-func (c *closeTrackingSSRClient) Render(ctx context.Context, req ssrRequest) (ssrResponse, error) {
-	return ssrResponse{HTML: ""}, nil
-}
-
-func (c *closeTrackingSSRClient) Close() error {
-	c.closed = true
-	return nil
-}
-
-func TestRendererCloseClosesSSRClient(t *testing.T) {
-	client := &closeTrackingSSRClient{}
-
-	r := &Renderer{
-		config: Config{
-			Dev: true,
-		},
-		ssr: client,
-	}
-
-	err := r.Close()
-	if err != nil {
-		t.Fatalf("unexpected close error: %v", err)
-	}
-
-	if !client.closed {
-		t.Fatal("expected SSR client to be closed")
-	}
-}
-
-func TestNewRendererCreatesDevSSRClientWhenCommandProvided(t *testing.T) {
-	r, err := New(Config{
-		Dev:     true,
-		ViteURL: "http://localhost:5173",
-		SSRCommand: []string{
-			"node",
-			"../js/ssr-worker.mjs",
-			"--entry",
-			"../js/fixtures/entry-server-ok.mjs",
-		},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	defer r.Close()
-
-	if r.ssr == nil {
-		t.Fatal("expected dev ssr client when SSRCommand is provided")
 	}
 }
 
@@ -227,5 +179,45 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 
 	if res.StatusCode == fiber.StatusOK {
 		t.Fatal("expected non-200 status when renderer has no ssr client")
+	}
+}
+
+func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+
+		_ = json.NewEncoder(w).Encode(httpRendererErrorResponse{
+			Error: httpRendererError{
+				Message: "renderer exploded",
+			},
+		})
+	}))
+	defer server.Close()
+
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			ViteURL:       "http://localhost:5173",
+			RenderURL:     server.URL,
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: newHTTPSSRClient(httpSSRClientConfig{
+			RenderURL: server.URL,
+			Timeout:   time.Second,
+		}),
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Home", map[string]string{})
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+
+	if res.StatusCode == fiber.StatusOK {
+		t.Fatal("expected non-200 response")
 	}
 }
