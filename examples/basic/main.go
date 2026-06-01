@@ -13,15 +13,24 @@ func main() {
 
 	dev := os.Getenv("ZEN_ENV") != "production"
 
-	cfg := zen.Config{
-		Dev:     dev,
-		ViteURL: "http://localhost:5173",
-		SSRCommand: []string{
+	ssrCommand := []string{
+		"node",
+		"./frontend/ssr-worker-dev.mjs",
+	}
+
+	if !dev {
+		ssrCommand = []string{
 			"node",
-			"./node_modules/@zenith/zen/js/ssr-worker.mjs",
+			"../../js/ssr-worker.mjs",
 			"--entry",
-			"./frontend/src/entry-server.tsx",
-		},
+			"./frontend/dist/server/entry-server.js",
+		}
+	}
+
+	cfg := zen.Config{
+		Dev:          dev,
+		ViteURL:      "http://localhost:5173",
+		SSRCommand:   ssrCommand,
 		ClientDist:   "./frontend/dist/client",
 		Manifest:     "./frontend/dist/client/.vite/manifest.json",
 		DefaultTitle: "Zen Basic Example",
