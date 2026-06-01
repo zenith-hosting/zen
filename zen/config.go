@@ -14,7 +14,6 @@ type Config struct {
 
 	ClientDist string
 	Manifest   string
-	SSRCommand []string
 
 	RenderTimeout time.Duration
 
