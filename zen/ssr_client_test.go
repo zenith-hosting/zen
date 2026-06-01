@@ -37,3 +37,53 @@ func TestSSRClientInterfaceCapturesRenderRequest(t *testing.T) {
 		t.Fatalf("expected rendered html, got %q", res.HTML)
 	}
 }
+
+func TestProcessSSRClientRendersThroughWorker(t *testing.T) {
+	client, err := newProcessSSRClient([]string{
+		"node",
+		"../js/ssr-worker.mjs",
+		"--entry",
+		"../js/fixtures/entry-server-ok.mjs",
+	})
+	if err != nil {
+		t.Fatalf("unexpected client error: %v", err)
+	}
+	defer client.Close()
+
+	res, err := client.Render(context.Background(), ssrRequest{
+		URL:  "/",
+		Page: "Home",
+		Props: map[string]string{
+			"title": "Hello",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected render error: %v", err)
+	}
+
+	if res.HTML != `<main data-page="Home">Hello</main>` {
+		t.Fatalf("unexpected html: %s", res.HTML)
+	}
+}
+
+func TestProcessSSRClientReturnsWorkerError(t *testing.T) {
+	client, err := newProcessSSRClient([]string{
+		"node",
+		"../js/ssr-worker.mjs",
+		"--entry",
+		"../js/fixtures/entry-server-error.mjs",
+	})
+	if err != nil {
+		t.Fatalf("unexpected client error: %v", err)
+	}
+	defer client.Close()
+
+	_, err = client.Render(context.Background(), ssrRequest{
+		URL:   "/",
+		Page:  "Home",
+		Props: map[string]string{},
+	})
+	if err == nil {
+		t.Fatal("expected render error")
+	}
+}
