@@ -5,11 +5,14 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/zenith/zen/zen"
 )
 
 func main() {
 	app := fiber.New()
+
+	app.Use(logger.New())
 
 	dev := os.Getenv("ZEN_ENV") != "production"
 
