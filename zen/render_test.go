@@ -71,3 +71,47 @@ func TestRenderWritesSSRDocumentToFiberResponse(t *testing.T) {
 		t.Fatalf("body missing Vite dev client: %s", body)
 	}
 }
+
+func TestRenderInjectsProductionManifestAssets(t *testing.T) {
+	client := &fakeSSRClient{
+		res: ssrResponse{
+			HTML: `<main>Production</main>`,
+		},
+	}
+
+	r := &Renderer{
+		config: Config{
+			Dev:           false,
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: client,
+		manifest: viteManifest{
+			"src/entry-client.tsx": {
+				File: "assets/entry-client.abc123.js",
+				CSS:  []string{"assets/app.def456.css"},
+			},
+		},
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Home", map[string]string{
+			"title": "Production",
+		})
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+	body := testutil.ReadBody(t, res)
+
+	if !strings.Contains(body, `<link rel="stylesheet" href="/assets/app.def456.css">`) {
+		t.Fatalf("body missing production css: %s", body)
+	}
+	if !strings.Contains(body, `<script type="module" src="/assets/entry-client.abc123.js"></script>`) {
+		t.Fatalf("body missing production script: %s", body)
+	}
+	if strings.Contains(body, "/@vite/client") {
+		t.Fatalf("production body should not include vite dev client: %s", body)
+	}
+}
