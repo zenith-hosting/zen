@@ -9,9 +9,9 @@
     "test:example-build": "pnpm --dir examples/basic/frontend build && cd examples/basic && go build ."
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "vite": "^7.0.0",
-    "preact": "^10.0.0",
-    "preact-render-to-string": "^6.0.0"
+    "@types/node": "^22.19.19",
+    "preact": "^10.29.2",
+    "preact-render-to-string": "^6.7.0",
+    "vite": "^7.3.3"
   }
 }

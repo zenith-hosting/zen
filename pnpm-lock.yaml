@@ -9,16 +9,16 @@ importers:
   .:
     devDependencies:
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.19.19
         version: 22.19.19
       preact:
-        specifier: ^10.0.0
+        specifier: ^10.29.2
         version: 10.29.2
       preact-render-to-string:
-        specifier: ^6.0.0
+        specifier: ^6.7.0
         version: 6.7.0(preact@10.29.2)
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.3
         version: 7.3.3(@types/node@22.19.19)
 
 packages:
