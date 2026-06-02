@@ -22,10 +22,13 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 		"frontend/index.html",
 		"frontend/src/app.css",
 		"frontend/src/pages.ts",
-		"frontend/src/entry-client.tsx",
-		"frontend/src/entry-server.tsx",
 		"frontend/src/pages/Home.tsx",
 		"frontend/src/pages/User.tsx",
+		"frontend/.zen/entries/entry-client.tsx",
+		"frontend/.zen/entries/entry-server.tsx",
+		"frontend/.zen/renderers/dev-renderer.mjs",
+		"frontend/.zen/renderers/prod-renderer.mjs",
+		"frontend/.zen/renderers/renderer-shared.mjs",
 	}
 
 	for _, path := range required {

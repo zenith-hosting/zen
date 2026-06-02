@@ -1,5 +1,7 @@
 import { hydrate } from "preact";
-import { pages, type PageName } from "./pages";
+//@ts-ignore
+import { pages, type PageName } from "../../src/pages";
+//@ts-ignore
 import "./app.css";
 
 type HydrationData = {
@@ -26,4 +28,5 @@ if (!app) {
   throw new Error("Missing app element");
 }
 
+//@ts-ignore
 hydrate(<Page {...data.props} />, app);

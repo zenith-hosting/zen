@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build:client": "vite build --outDir dist/client --manifest",
-    "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "build:server": "vite build --ssr .zen/entries/entry-server.tsx --outDir dist/server",
     "build": "pnpm build:client && pnpm build:server"
   },
   "dependencies": {

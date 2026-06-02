@@ -11,7 +11,7 @@ func TestReadManifestEntryClientAssets(t *testing.T) {
 	path := filepath.Join(dir, "manifest.json")
 
 	manifest := `{
-		"src/entry-client.tsx": {
+		".zen/entries/entry-client.tsx": {
 			"file": "assets/entry-client.abc123.js",
 			"css": ["assets/app.def456.css"],
 			"imports": ["_vendor.js"]
@@ -30,7 +30,7 @@ func TestReadManifestEntryClientAssets(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	assets, err := got.clientAssets("src/entry-client.tsx")
+	assets, err := got.clientAssets(".zen/entries/entry-client.tsx")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestReadManifestEntryClientAssets(t *testing.T) {
 func TestManifestMissingEntryReturnsError(t *testing.T) {
 	m := viteManifest{}
 
-	_, err := m.clientAssets("src/entry-client.tsx")
+	_, err := m.clientAssets(".zen/entries/entry-client.tsx")
 	if err == nil {
 		t.Fatal("expected error")
 	}

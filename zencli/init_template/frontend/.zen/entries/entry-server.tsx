@@ -1,5 +1,5 @@
 import renderToString from "preact-render-to-string";
-import { pages, type PageName } from "./pages";
+import { pages, type PageName } from "../../src/pages";
 
 type RenderRequest = {
   url: string;

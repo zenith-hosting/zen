@@ -89,7 +89,7 @@ func devRendererCommand(cfg Config) ProcessCommand {
 			"--root",
 			".",
 			"--entry",
-			"/src/entry-server.tsx",
+			"/.zen/entries/entry-server.tsx",
 			"--host",
 			"127.0.0.1",
 			"--port",

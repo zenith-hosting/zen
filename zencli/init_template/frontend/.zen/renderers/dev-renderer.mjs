@@ -12,7 +12,7 @@ import {
 function parseArgs(argv) {
   const args = {
     root: process.cwd(),
-    entry: "/src/entry-server.tsx",
+    entry: "/.zen/entries/entry-server.tsx",
     host: "127.0.0.1",
     port: 5173
   };
@@ -26,7 +26,7 @@ function parseArgs(argv) {
     }
 
     if (item === "--entry") {
-      args.entry = argv[++i] ?? "/src/entry-server.tsx";
+      args.entry = argv[++i] ?? "/.zen/entries/entry-server.tsx";
       continue;
     }
 

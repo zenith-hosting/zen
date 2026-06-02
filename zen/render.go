@@ -99,10 +99,10 @@ func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...Render
 	if r.config.Dev {
 		devScripts = []string{
 			r.config.ViteURL + "/@vite/client",
-			r.config.ViteURL + "/src/entry-client.tsx",
+			r.config.ViteURL + "/.zen/entries/entry-client.tsx",
 		}
 	} else {
-		assets, err = r.manifest.clientAssets("src/entry-client.tsx")
+		assets, err = r.manifest.clientAssets(".zen/entries/entry-client.tsx")
 		if err != nil {
 			return err
 		}

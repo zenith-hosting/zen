@@ -5,13 +5,16 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const files = [
-  "dev-renderer.mjs",
-  "prod-renderer.mjs",
-  "renderer-shared.mjs"
+  "entries/entry-server.tsx",
+  "entries/entry-client.tsx",
+
+  "renderers/dev-renderer.mjs",
+  "renderers/prod-renderer.mjs",
+  "renderers/renderer-shared.mjs",
 ];
 
 const sourceDir = join(repoRoot, "js");
-const targetDir = join(repoRoot, "zencli", "init_template", "frontend", ".zen", "renderers");
+const targetDir = join(repoRoot, "zencli", "init_template", "frontend", ".zen");
 
 async function read(path) {
   return readFile(path, "utf8");
