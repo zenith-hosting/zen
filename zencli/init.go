@@ -12,7 +12,7 @@ func runInit(root string) error {
 
 		if _, err := os.Stat(fullPath); err == nil {
 			return fmt.Errorf("zen init: %s already exists", path)
-		} else if err != nil && !os.IsNotExist(err) {
+		} else if !os.IsNotExist(err) {
 			return err
 		}
 	}

@@ -32,7 +32,7 @@ func ensureFrontendDependencies(root string, cfg Config) error {
 
 	if _, err := os.Stat(vitePackage); err == nil {
 		return nil
-	} else if err != nil && !os.IsNotExist(err) {
+	} else if !os.IsNotExist(err) {
 		return err
 	}
 
