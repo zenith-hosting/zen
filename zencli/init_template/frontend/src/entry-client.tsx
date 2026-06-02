@@ -1,4 +1,4 @@
-import { h, hydrate } from "preact";
+import { hydrate } from "preact";
 import { pages, type PageName } from "./pages";
 import "./app.css";
 

@@ -1,4 +1,3 @@
-import { h } from "preact";
 import renderToString from "preact-render-to-string";
 import { pages, type PageName } from "./pages";
 
