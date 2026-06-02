@@ -7,8 +7,8 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const serverPath = join(here, "prod-renderer.mjs");
-const okEntry = join(here, "fixtures", "entry-server-ok.mjs");
-const errorEntry = join(here, "fixtures", "entry-server-error.mjs");
+const okEntry = join(here, "..", "fixtures", "entry-server-ok.mjs");
+const errorEntry = join(here, "..", "fixtures", "entry-server-error.mjs");
 
 function startRenderer(entry, port) {
   return spawn(process.execPath, [

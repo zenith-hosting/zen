@@ -21,7 +21,6 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 		"frontend/vite.config.ts",
 		"frontend/index.html",
 		"frontend/src/app.css",
-		"frontend/src/pages.ts",
 		"frontend/src/pages/Home.tsx",
 		"frontend/src/pages/User.tsx",
 		"frontend/.zen/entries/entry-client.tsx",
@@ -34,6 +33,26 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 	for _, path := range required {
 		if _, ok := files[path]; !ok {
 			t.Fatalf("starter files missing %s", path)
+		}
+	}
+}
+
+func TestStarterZenEntriesDiscoverPagesWithViteGlob(t *testing.T) {
+	files := starterFiles()
+
+	for _, path := range []string{
+		"frontend/.zen/entries/entry-client.tsx",
+		"frontend/.zen/entries/entry-server.tsx",
+	} {
+		contents := files[path]
+
+		for _, want := range []string{
+			`import.meta.glob`,
+			`../../src/pages/**/*.tsx`,
+		} {
+			if !strings.Contains(contents, want) {
+				t.Fatalf("%s missing %q\n%s", path, want, contents)
+			}
 		}
 	}
 }

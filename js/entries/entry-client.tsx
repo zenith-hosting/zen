@@ -1,13 +1,26 @@
 import { hydrate } from "preact";
-//@ts-ignore
-import { pages, type PageName } from "../../src/pages";
-//@ts-ignore
-import "./app.css";
+import type { ComponentType } from "preact";
+import "../../src/app.css";
+
+type PageModule = {
+  default: ComponentType<Record<string, unknown>>;
+};
 
 type HydrationData = {
-  page: PageName;
+  page: string;
   props: Record<string, unknown>;
 };
+
+const modules = import.meta.glob<PageModule>("../../src/pages/**/*.tsx", {
+  eager: true
+});
+
+const pages = Object.fromEntries(
+  Object.entries(modules).map(([path, mod]) => [
+    path.replace("../../src/pages/", "").replace(/\.tsx$/, ""),
+    mod.default
+  ])
+);
 
 const element = document.getElementById("__ZEN_DATA__");
 
@@ -28,5 +41,4 @@ if (!app) {
   throw new Error("Missing app element");
 }
 
-//@ts-ignore
 hydrate(<Page {...data.props} />, app);
