@@ -1,6 +1,6 @@
-import { h, hydrate } from "preact";
-import { pages, type PageName } from "./pages";
-import "./app.css";
+import { hydrate } from "preact";
+import { pages, type PageName } from "../../src/pages";
+import "../../src/app.css";
 
 type HydrationData = {
   page: PageName;

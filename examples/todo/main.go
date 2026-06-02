@@ -118,5 +118,7 @@ func main() {
 		return c.Redirect().To("/")
 	})
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
+		DisableStartupMessage: true,
+	}))
 }

@@ -9,5 +9,5 @@
     "types": ["vite/client"],
     "skipLibCheck": true
   },
-  "include": ["src", ".zen/entries", ".zen/entries"]
+  "include": ["src", ".zen/entries"]
 }

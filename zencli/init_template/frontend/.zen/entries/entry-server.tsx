@@ -1,4 +1,5 @@
 import renderToString from "preact-render-to-string";
+//@ts-ignore
 import { pages, type PageName } from "../../src/pages";
 
 type RenderRequest = {
@@ -14,6 +15,7 @@ export async function render(request: RenderRequest) {
     throw new Error(`Unknown page: ${request.page}`);
   }
 
+  //@ts-ignore
   const html = renderToString(<Page {...request.props} />);
 
   return {

@@ -12,7 +12,6 @@ import (
 
 func main() {
 	app := fiber.New()
-
 	app.Use(logger.New())
 
 	dev := os.Getenv("ZEN_ENV") != "prod"
@@ -65,5 +64,7 @@ func main() {
 		return c.Redirect().To("/")
 	})
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
+		DisableStartupMessage: true,
+	}))
 }

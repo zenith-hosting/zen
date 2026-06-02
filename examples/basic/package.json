@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "zen dev",
     "build": "zen build",
-    "start": "ZEN_ENV=prod zen dev",
+    "start": "zen start",
     "check": "zen check"
   }
 }
