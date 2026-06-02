@@ -19,7 +19,7 @@ func TestDevPlanUsesOnlyDevRendererAndAir(t *testing.T) {
 		t.Fatalf("expected renderer first, got %q", plan[0].Name)
 	}
 
-	if plan[0].Command.Args[0] != "js/dev-renderer.mjs" {
+	if plan[0].Command.Args[0] != ".zen/renderers/dev-renderer.mjs" {
 		t.Fatalf("expected dev renderer, got %#v", plan[0].Command.Args)
 	}
 

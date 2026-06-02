@@ -19,7 +19,7 @@ func TestStartPlanUsesProductionRendererAndBinary(t *testing.T) {
 		t.Fatalf("expected renderer first, got %q", plan[0].Name)
 	}
 
-	if plan[0].Command.Args[0] != "js/prod-renderer.mjs" {
+	if plan[0].Command.Args[0] != ".zen/renderers/prod-renderer.mjs" {
 		t.Fatalf("expected production renderer, got %#v", plan[0].Command.Args)
 	}
 
