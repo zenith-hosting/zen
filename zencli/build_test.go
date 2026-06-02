@@ -1,8 +1,6 @@
 package zencli
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestBuildPlanIncludesFrontendThenGoBuild(t *testing.T) {
 	cfg := Config{

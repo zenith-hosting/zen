@@ -85,9 +85,9 @@ func devRendererCommand(cfg Config) ProcessCommand {
 	return ProcessCommand{
 		Name: "node",
 		Args: []string{
-			"js/dev-renderer.mjs",
+			".zen/renderers/dev-renderer.mjs",
 			"--root",
-			cfg.FrontendDir,
+			".",
 			"--entry",
 			"/src/entry-server.tsx",
 			"--host",
@@ -95,6 +95,7 @@ func devRendererCommand(cfg Config) ProcessCommand {
 			"--port",
 			strconv.Itoa(cfg.DevRendererPort),
 		},
+		Dir: cfg.FrontendDir,
 	}
 }
 
@@ -102,14 +103,15 @@ func prodRendererCommand(cfg Config) ProcessCommand {
 	return ProcessCommand{
 		Name: "node",
 		Args: []string{
-			"js/prod-renderer.mjs",
+			".zen/renderers/prod-renderer.mjs",
 			"--entry",
-			cfg.FrontendDir + "/dist/server/entry-server.js",
+			"./dist/server/entry-server.js",
 			"--host",
 			"127.0.0.1",
 			"--port",
 			strconv.Itoa(cfg.ProdRendererPort),
 		},
+		Dir: cfg.FrontendDir,
 	}
 }
 

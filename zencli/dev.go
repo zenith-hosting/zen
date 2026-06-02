@@ -1,5 +1,14 @@
 package zencli
 
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+)
+
 type NamedProcessCommand struct {
 	Name    string
 	Command ProcessCommand
@@ -18,31 +27,50 @@ func devPlan(cfg Config) []NamedProcessCommand {
 	}
 }
 
-func prodPlan(cfg Config) []NamedProcessCommand {
-	return []NamedProcessCommand{
-		{
-			Name:    "renderer",
-			Command: prodRendererCommand(cfg),
-		},
-		{
-			Name:    "app",
-			Command: goProdCommand(cfg),
-		},
+func ensureFrontendDependencies(root string, cfg Config) error {
+	vitePackage := filepath.Join(root, cfg.FrontendDir, "node_modules", "vite", "package.json")
+
+	if _, err := os.Stat(vitePackage); err == nil {
+		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
 	}
+
+	return fmt.Errorf("zen: missing frontend dependencies; run `pnpm --dir %s install`", cfg.FrontendDir)
 }
 
-func planForMode(mode Mode, cfg Config) []NamedProcessCommand {
-	if mode == ModeProd {
-		return prodPlan(cfg)
+func runDev(ctx context.Context, cfg Config, stdout io.Writer, stderr io.Writer) error {
+	if err := ensureFrontendDependencies(".", cfg); err != nil {
+		return err
 	}
 
-	return devPlan(cfg)
-}
+	plan := devPlan(cfg)
 
-func preflightForMode(mode Mode, cfg Config) []ProcessCommand {
-	if mode == ModeProd {
-		return buildPlan(cfg)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errs := make(chan error, len(plan))
+
+	for _, item := range plan {
+		proc := ManagedProcess{
+			Name:    item.Name,
+			Command: item.Command,
+			Stdout:  stdout,
+			Stderr:  stderr,
+		}
+
+		go func() {
+			errs <- proc.Run(ctx)
+		}()
 	}
 
-	return nil
+	healthURL := fmt.Sprintf("http://127.0.0.1:%d", cfg.DevRendererPort)
+	if err := waitForHealth(ctx, healthURL, 100*time.Millisecond); err != nil {
+		cancel()
+		return err
+	}
+
+	err := <-errs
+	cancel()
+	return err
 }

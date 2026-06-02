@@ -3,6 +3,7 @@ package zencli
 import (
 	"context"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -32,7 +33,7 @@ func TestRendererCommands(t *testing.T) {
 		t.Fatalf("expected node, got %q", dev.Name)
 	}
 
-	if !contains(dev.Args, "js/dev-renderer.mjs") {
+	if !contains(dev.Args, ".zen/renderers/dev-renderer.mjs") {
 		t.Fatalf("expected dev renderer script in args, got %#v", dev.Args)
 	}
 
@@ -41,7 +42,7 @@ func TestRendererCommands(t *testing.T) {
 		t.Fatalf("expected node, got %q", prod.Name)
 	}
 
-	if !contains(prod.Args, "js/prod-renderer.mjs") {
+	if !contains(prod.Args, ".zen/renderers/prod-renderer.mjs") {
 		t.Fatalf("expected prod renderer script in args, got %#v", prod.Args)
 	}
 }
@@ -70,11 +71,5 @@ func TestManagedProcessRunsCommand(t *testing.T) {
 }
 
 func contains(items []string, value string) bool {
-	for _, item := range items {
-		if item == value {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(items, value)
 }
