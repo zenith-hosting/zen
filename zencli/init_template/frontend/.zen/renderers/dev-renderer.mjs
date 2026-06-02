@@ -1,4 +1,3 @@
-
 import http from "node:http";
 import { createServer as createViteServer } from "vite";
 import {
@@ -52,14 +51,7 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  const vite = await createViteServer({
-    root: args.root,
-    server: {
-      hmr: false,
-      middlewareMode: true
-    },
-    appType: "custom"
-  });
+  let vite;
 
   const server = http.createServer(async (req, res) => {
     if (isHealthRequest(req)) {
@@ -90,6 +82,19 @@ async function main() {
     }
 
     vite.middlewares(req, res);
+  });
+
+  vite = await createViteServer({
+    root: args.root,
+    server: {
+      host: args.host,
+      port: args.port,
+      hmr: {
+        server
+      },
+      middlewareMode: true
+    },
+    appType: "custom"
   });
 
   server.listen(args.port, args.host, () => {

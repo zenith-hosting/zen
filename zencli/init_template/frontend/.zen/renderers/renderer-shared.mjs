@@ -1,4 +1,3 @@
-
 export async function readJSON(req) {
   let body = "";
 

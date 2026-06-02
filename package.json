@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "go test ./... && node --test js/*.test.mjs",
+    "test": "go test ./... && node --test js/*.test.mjs && pnpm check:renderers && node --test scripts/*.test.mjs",
     "test:go": "go test ./...",
     "test:js": "node --test js/*.test.mjs",
+    "sync:renderers": "node scripts/sync-renderers.mjs",
     "test:example-build": "pnpm --dir examples/basic/frontend build && cd examples/basic && go build ."
   },
   "devDependencies": {
