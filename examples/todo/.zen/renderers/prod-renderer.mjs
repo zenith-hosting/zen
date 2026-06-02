@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createServer as createViteServer } from "vite";
+import { pathToFileURL } from "node:url";
 import {
   createHealthResponse,
   isHealthRequest,
@@ -11,22 +11,16 @@ import {
 
 function parseArgs(argv) {
   const args = {
-    root: process.cwd(),
-    entry: "/src/entry-server.tsx",
     host: "127.0.0.1",
-    port: 5173
+    port: 4174,
+    entry: ""
   };
 
   for (let i = 0; i < argv.length; i++) {
     const item = argv[i];
 
-    if (item === "--root") {
-      args.root = argv[++i] ?? process.cwd();
-      continue;
-    }
-
     if (item === "--entry") {
-      args.entry = argv[++i] ?? "/src/entry-server.tsx";
+      args.entry = argv[++i] ?? "";
       continue;
     }
 
@@ -36,9 +30,13 @@ function parseArgs(argv) {
     }
 
     if (item === "--port") {
-      args.port = Number(argv[++i] ?? "5173");
+      args.port = Number(argv[++i] ?? "4174");
       continue;
     }
+  }
+
+  if (!args.entry) {
+    throw new Error("missing required --entry argument");
   }
 
   if (!Number.isInteger(args.port) || args.port <= 0) {
@@ -50,49 +48,42 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const entryURL = pathToFileURL(args.entry).href;
+  const mod = await import(entryURL);
 
-  const vite = await createViteServer({
-    root: args.root,
-    server: {
-      hmr: false,
-      middlewareMode: true
-    },
-    appType: "custom"
-  });
+  if (typeof mod.render !== "function") {
+    throw new Error("SSR entry must export render(request)");
+  }
 
   const server = http.createServer(async (req, res) => {
     if (isHealthRequest(req)) {
-      writeJSON(res, 200, createHealthResponse("dev"));
+      writeJSON(res, 200, createHealthResponse("production"));
       return;
     }
 
     if (isRenderRequest(req)) {
       try {
         const body = await readJSON(req);
-        const mod = await vite.ssrLoadModule(args.entry);
-
-        if (typeof mod.render !== "function") {
-          throw new Error("SSR entry must export render(request)");
-        }
-
         const result = await mod.render(body);
         writeJSON(res, 200, result);
       } catch (error) {
-        vite.ssrFixStacktrace(error);
-
         writeRendererError(res, 500, error, {
-          includeStack: true
+          includeStack: process.env.NODE_ENV !== "production"
         });
       }
 
       return;
     }
 
-    vite.middlewares(req, res);
+    writeJSON(res, 404, {
+      error: {
+        message: "not found"
+      }
+    });
   });
 
   server.listen(args.port, args.host, () => {
-    process.stdout.write(`Zen dev renderer listening on http://${args.host}:${args.port}\n`);
+    process.stdout.write(`Zen production renderer listening on http://${args.host}:${args.port}\n`);
   });
 }
 

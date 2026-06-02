@@ -55,6 +55,34 @@ async function waitForHealth(port) {
   throw new Error(`renderer did not become healthy on port ${port}`);
 }
 
+async function waitForViteHMR(port) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/`, "vite-hmr");
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("timed out waiting for Vite HMR connection"));
+      }, 1000);
+
+      ws.addEventListener("message", (event) => {
+        const payload = JSON.parse(String(event.data));
+
+        if (payload.type === "connected") {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+
+      ws.addEventListener("error", () => {
+        clearTimeout(timeout);
+        reject(new Error("Vite HMR websocket failed"));
+      });
+    });
+  } finally {
+    ws.close();
+  }
+}
+
 test("dev renderer renders through vite", async () => {
   const root = await createViteFixture();
   const port = 4781;
@@ -94,6 +122,33 @@ test("dev renderer renders through vite", async () => {
 
     assert.equal(res.status, 200);
     assert.equal(body.html, `<main data-page="Home">Hello</main>`);
+  } finally {
+    child.kill();
+    await once(child, "exit");
+  }
+});
+
+test("dev renderer exposes Vite HMR websocket", async () => {
+  const root = await createViteFixture();
+  const port = 4782;
+
+  const child = spawn(process.execPath, [
+    serverPath,
+    "--root",
+    root,
+    "--entry",
+    "/src/entry-server.js",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(port)
+  ], {
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  try {
+    await waitForHealth(port);
+    await waitForViteHMR(port);
   } finally {
     child.kill();
     await once(child, "exit");

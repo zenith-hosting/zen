@@ -8,7 +8,7 @@ export default function Home(props: HomeProps) {
     <main class="min-h-screen bg-zinc-950 px-6 py-12 text-zinc-100">
       <section class="mx-auto max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
         <p class="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-400">
-          Zen v0.1
+          Zen
         </p>
 
         <h1 class="text-4xl font-bold tracking-tight">

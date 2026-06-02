@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        client: "src/entry-client.tsx"
+        client: ".zen/entries/entry-client.tsx"
       }
     }
   }

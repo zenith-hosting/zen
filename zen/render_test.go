@@ -102,7 +102,7 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 		},
 		ssr: client,
 		manifest: viteManifest{
-			"src/entry-client.tsx": {
+			".zen/entries/entry-client.tsx": {
 				File: "assets/entry-client.abc123.js",
 				CSS:  []string{"assets/app.def456.css"},
 			},
@@ -135,7 +135,7 @@ func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 	manifestPath := filepath.Join(dir, "manifest.json")
 
 	err := os.WriteFile(manifestPath, []byte(`{
-		"src/entry-client.tsx": {
+		".zen/entries/entry-client.tsx": {
 			"file": "assets/entry-client.js"
 		}
 	}`), 0o644)

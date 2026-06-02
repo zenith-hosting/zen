@@ -1,0 +1,8 @@
+{
+  "appCommand": "go run .",
+  "airCommand": "air -c .air.toml",
+  "frontendDir": "frontend",
+  "devRendererPort": 5173,
+  "prodRendererPort": 4174,
+  "binaryPath": "./bin/basic"
+}

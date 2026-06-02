@@ -1,11 +1,26 @@
-import { h, hydrate } from "preact";
-import { pages, type PageName } from "./pages";
-import "./app.css";
+import { hydrate } from "preact";
+import type { ComponentType } from "preact";
+import "../../src/app.css";
+
+type PageModule = {
+  default: ComponentType<Record<string, unknown>>;
+};
 
 type HydrationData = {
-  page: PageName;
+  page: string;
   props: Record<string, unknown>;
 };
+
+const modules = import.meta.glob<PageModule>("../../src/pages/**/*.tsx", {
+  eager: true
+});
+
+const pages = Object.fromEntries(
+  Object.entries(modules).map(([path, mod]) => [
+    path.replace("../../src/pages/", "").replace(/\.tsx$/, ""),
+    mod.default
+  ])
+);
 
 const element = document.getElementById("__ZEN_DATA__");
 
