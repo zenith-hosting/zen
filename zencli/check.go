@@ -7,7 +7,7 @@ import (
 )
 
 func requiredTools() []string {
-	return []string{"go", "node", "pnpm", "air"}
+	return []string{"go", "node", "pnpm"}
 }
 
 func runCheck(stdout io.Writer) error {

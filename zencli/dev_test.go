@@ -4,7 +4,7 @@ import "testing"
 
 func TestDevPlanUsesOnlyDevRendererAndAir(t *testing.T) {
 	cfg := Config{
-		AirCommand:      "air -c .air.toml",
+		AirCommand:      "go tool air -c .air.toml",
 		FrontendDir:     "frontend",
 		DevRendererPort: 5173,
 	}

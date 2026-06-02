@@ -5,7 +5,7 @@ import "testing"
 func TestRequiredTools(t *testing.T) {
 	got := requiredTools()
 
-	want := []string{"go", "node", "pnpm", "air"}
+	want := []string{"go", "node", "pnpm"}
 
 	if len(got) != len(want) {
 		t.Fatalf("expected %d tools, got %d", len(want), len(got))

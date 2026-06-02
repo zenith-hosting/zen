@@ -25,4 +25,6 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 )
 
+tool github.com/air-verse/air
+
 replace github.com/zenith/zen => ../..

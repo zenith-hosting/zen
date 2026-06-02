@@ -18,7 +18,7 @@ func TestLoadConfigAppliesDefaults(t *testing.T) {
 		t.Fatalf("expected default app command, got %q", cfg.AppCommand)
 	}
 
-	if cfg.AirCommand != "air" {
+	if cfg.AirCommand != "go tool air" {
 		t.Fatalf("expected default air command, got %q", cfg.AirCommand)
 	}
 
@@ -40,7 +40,7 @@ func TestLoadConfigReadsZenConfigJSON(t *testing.T) {
 
 	raw := `{
 		"appCommand": "go run ./cmd/app",
-		"airCommand": "air -c .air.toml",
+		"airCommand": "go tool air -c .air.toml",
 		"frontendDir": "web",
 		"devRendererPort": 5273,
 		"prodRendererPort": 4274,

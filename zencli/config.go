@@ -18,7 +18,7 @@ type Config struct {
 func defaultConfig() Config {
 	return Config{
 		AppCommand:       "go run .",
-		AirCommand:       "air",
+		AirCommand:       "go tool air",
 		FrontendDir:      "frontend",
 		DevRendererPort:  5173,
 		ProdRendererPort: 4174,
@@ -46,7 +46,7 @@ func loadConfig(root string) (Config, error) {
 		cfg.AppCommand = "go run ."
 	}
 	if cfg.AirCommand == "" {
-		cfg.AirCommand = "air"
+		cfg.AirCommand = "go tool air"
 	}
 	if cfg.FrontendDir == "" {
 		cfg.FrontendDir = "frontend"

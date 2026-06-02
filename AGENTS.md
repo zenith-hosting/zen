@@ -378,7 +378,7 @@ It should start:
 
 ```text
 renderer: node .zen/renderers/dev-renderer.mjs
-app:      air -c .air.toml
+app:      go tool air -c .air.toml
 ```
 
 It should not build production artifacts.
@@ -423,7 +423,6 @@ Should verify required tools:
 go
 node
 pnpm
-air
 ```
 
 ---
