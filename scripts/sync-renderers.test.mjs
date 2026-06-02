@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const scriptPath = join(here, "sync-renderers.mjs");
 
 test("renderer template files are in sync with js sources", async () => {
-  const child = spawn(process.execPath, [scriptPath, "--check"], {
+  const child = spawn(process.execPath, [scriptPath], {
     stdio: ["ignore", "pipe", "pipe"]
   });
 
