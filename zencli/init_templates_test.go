@@ -1,6 +1,8 @@
 package zencli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -29,6 +31,20 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 	for _, path := range required {
 		if _, ok := files[path]; !ok {
 			t.Fatalf("starter files missing %s", path)
+		}
+	}
+}
+
+func TestStarterTemplateSourceFilesExist(t *testing.T) {
+	for path := range starterFiles() {
+		sourcePath := path
+		if sourcePath == "go.mod" {
+			sourcePath = "go.mod.template"
+		}
+
+		fullPath := filepath.Join("init_template", sourcePath)
+		if _, err := os.Stat(fullPath); err != nil {
+			t.Fatalf("expected starter source file %s to exist: %v", fullPath, err)
 		}
 	}
 }
