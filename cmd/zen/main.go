@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := zencli.Run(os.Args[1:], os.Environ(), os.Stdout, os.Stderr); err != nil {
+	if err := zencli.Run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

@@ -6,7 +6,9 @@ import (
 	"io"
 )
 
-func Run(args []string, env []string, stdout io.Writer, stderr io.Writer) error {
+const ZenConfigVersion = 1
+
+func Run(args []string, stdout io.Writer, stderr io.Writer) error {
 	if len(args) == 0 {
 		printUsage(stdout)
 		return nil
@@ -16,11 +18,13 @@ func Run(args []string, env []string, stdout io.Writer, stderr io.Writer) error 
 	cfg, err := loadConfig(root)
 	if err != nil {
 		return err
+	} else if cfg.ZenConfigVersion != ZenConfigVersion {
+		return fmt.Errorf("unsupported zen config version %d", cfg.ZenConfigVersion)
 	}
 
 	switch args[0] {
 	case "init":
-		return runInit(root)
+		return runInit(context.Background(), root, stdout, stderr)
 
 	case "dev":
 		return runDev(context.Background(), cfg, stdout, stderr)
@@ -30,9 +34,6 @@ func Run(args []string, env []string, stdout io.Writer, stderr io.Writer) error 
 
 	case "start":
 		return runStart(context.Background(), cfg, stdout, stderr)
-
-	case "check":
-		return runCheck(stdout)
 
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
@@ -44,5 +45,4 @@ func printUsage(stdout io.Writer) {
 	_, _ = fmt.Fprintln(stdout, "zen dev")
 	_, _ = fmt.Fprintln(stdout, "zen build")
 	_, _ = fmt.Fprintln(stdout, "zen start")
-	_, _ = fmt.Fprintln(stdout, "zen check")
 }

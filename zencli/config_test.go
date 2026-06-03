@@ -14,6 +14,10 @@ func TestLoadConfigAppliesDefaults(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if cfg.ZenConfigVersion != 1 {
+		t.Fatalf("expected zen config version 1, got %d", cfg.ZenConfigVersion)
+	}
+
 	if cfg.AppCommand != "go run ." {
 		t.Fatalf("expected default app command, got %q", cfg.AppCommand)
 	}

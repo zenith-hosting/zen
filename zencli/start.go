@@ -20,7 +20,7 @@ func startPlan(cfg Config) []NamedProcessCommand {
 	}
 }
 
-func runStart(ctx context.Context, cfg Config, stdout io.Writer, stderr io.Writer) error {
+func runStart(ctx context.Context, cfg Config, stdout, stderr io.Writer) error {
 	plan := startPlan(cfg)
 
 	ctx, cancel := context.WithCancel(ctx)

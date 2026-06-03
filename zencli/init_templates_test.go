@@ -96,7 +96,6 @@ func TestStarterPackageScriptsUseZenCommands(t *testing.T) {
 		`"dev": "zen dev"`,
 		`"build": "zen build"`,
 		`"start": "zen start"`,
-		`"check": "zen check"`,
 	} {
 		if !strings.Contains(pkg, want) {
 			t.Fatalf("package.json missing %q\n%s", want, pkg)

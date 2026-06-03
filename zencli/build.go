@@ -12,7 +12,7 @@ func buildPlan(cfg Config) []ProcessCommand {
 	}
 }
 
-func runBuild(ctx context.Context, cfg Config, stdout io.Writer, stderr io.Writer) error {
+func runBuild(ctx context.Context, cfg Config, stdout, stderr io.Writer) error {
 	for _, step := range buildPlan(cfg) {
 		proc := ManagedProcess{
 			Name:    step.Name,

@@ -1,6 +1,7 @@
 package zencli
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,10 @@ import (
 func TestRunInitWritesCompleteStarterProject(t *testing.T) {
 	dir := t.TempDir()
 
-	err := runInit(dir)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := runInit(t.Context(), dir, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -30,7 +34,10 @@ func TestRunInitWritesCompleteStarterProject(t *testing.T) {
 func TestRunInitCreatesNestedDirectories(t *testing.T) {
 	dir := t.TempDir()
 
-	err := runInit(dir)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := runInit(t.Context(), dir, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,12 +50,15 @@ func TestRunInitCreatesNestedDirectories(t *testing.T) {
 func TestRunInitRefusesToOverwriteExistingFile(t *testing.T) {
 	dir := t.TempDir()
 
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
 	existing := filepath.Join(dir, "main.go")
 	if err := os.WriteFile(existing, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	err := runInit(dir)
+	err := runInit(t.Context(), dir, &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected overwrite protection error")
 	}

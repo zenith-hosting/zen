@@ -11,14 +11,14 @@ func TestRunWithoutArgsPrintsUsage(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := Run([]string{}, []string{}, &stdout, &stderr)
+	err := Run([]string{}, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	got := stdout.String()
 
-	for _, want := range []string{"zen init", "zen dev", "zen build", "zen start", "zen check"} {
+	for _, want := range []string{"zen init", "zen dev", "zen build", "zen start"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("usage missing %q in %q", want, got)
 		}
@@ -29,7 +29,7 @@ func TestRunRejectsUnknownCommand(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := Run([]string{"whatever"}, []string{}, &stdout, &stderr)
+	err := Run([]string{"whatever"}, &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -57,7 +57,7 @@ func TestRunInitCommandCreatesStarter(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err = Run([]string{"init"}, []string{}, &stdout, &stderr)
+	err = Run([]string{"init"}, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

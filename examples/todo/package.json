@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "./zen dev",
     "build": "./zen build",
-    "start": "./zen start",
-    "check": "./zen check"
+    "start": "./zen start"
   }
 }

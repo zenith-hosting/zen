@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	ZenConfigVersion int    `json:"zenConfigVersion"`
 	AppCommand       string `json:"appCommand"`
 	AirCommand       string `json:"airCommand"`
 	FrontendDir      string `json:"frontendDir"`
@@ -17,6 +18,7 @@ type Config struct {
 
 func defaultConfig() Config {
 	return Config{
+		ZenConfigVersion: 1,
 		AppCommand:       "go run .",
 		AirCommand:       "go tool air",
 		FrontendDir:      "frontend",
@@ -42,6 +44,9 @@ func loadConfig(root string) (Config, error) {
 		return Config{}, err
 	}
 
+	if cfg.ZenConfigVersion == 0 {
+		cfg.ZenConfigVersion = 1
+	}
 	if cfg.AppCommand == "" {
 		cfg.AppCommand = "go run ."
 	}

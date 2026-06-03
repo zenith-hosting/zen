@@ -39,7 +39,7 @@ func ensureFrontendDependencies(root string, cfg Config) error {
 	return fmt.Errorf("zen: missing frontend dependencies; run `pnpm --dir %s install`", cfg.FrontendDir)
 }
 
-func runDev(ctx context.Context, cfg Config, stdout io.Writer, stderr io.Writer) error {
+func runDev(ctx context.Context, cfg Config, stdout, stderr io.Writer) error {
 	if err := ensureFrontendDependencies(".", cfg); err != nil {
 		return err
 	}

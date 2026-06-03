@@ -101,12 +101,6 @@ cd examples/basic
 ../../bin/zen start
 ```
 
-Check required tools:
-
-```bash
-zen check
-```
-
 Initialize a new project:
 
 ```bash
@@ -148,7 +142,6 @@ zencli/
   dev.go
   start.go
   build.go
-  check.go
   init.go
   init_templates.go
   process.go
@@ -413,16 +406,6 @@ app:      ZEN_ENV=prod ./bin/app
 
 ```bash
 zen build
-```
-
-### `zen check`
-
-Should verify required tools:
-
-```text
-go
-node
-pnpm
 ```
 
 ---
