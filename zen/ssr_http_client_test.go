@@ -120,7 +120,7 @@ func TestHTTPSSRClientHandlesParallelRequests(t *testing.T) {
 
 	errs := make(chan error, 25)
 
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		go func() {
 			_, err := client.Render(context.Background(), ssrRequest{
 				URL:   "/",
@@ -131,7 +131,7 @@ func TestHTTPSSRClientHandlesParallelRequests(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		if err := <-errs; err != nil {
 			t.Fatalf("parallel render failed: %v", err)
 		}

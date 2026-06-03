@@ -79,7 +79,7 @@ func main() {
 	}
 
 	if !dev {
-		cfg.RenderURL = "http://127.0.0.1:4175/__zen/render"
+		cfg.RenderURL = "http://127.0.0.1:4174/__zen/render"
 	}
 
 	renderer, err := zen.New(cfg)
@@ -100,13 +100,27 @@ func main() {
 		}, zen.WithTitle("Todo List"))
 	})
 
+	registerTodoRoutes(app, store)
+
+	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
+		DisableStartupMessage: true,
+	}))
+}
+
+func registerTodoRoutes(app *fiber.App, store *TodoStore) {
 	app.Post("/todos", func(c fiber.Ctx) error {
 		text := strings.TrimSpace(c.FormValue("text"))
 		if text != "" {
 			store.Add(text)
 		}
 
-		return c.Redirect().To("/")
+		if !wantsJSON(c) {
+			return c.Redirect().To("/")
+		}
+
+		return c.JSON(map[string]any{
+			"todos": store.List(),
+		})
 	})
 
 	app.Post("/todos/:id/delete", func(c fiber.Ctx) error {
@@ -115,10 +129,16 @@ func main() {
 			store.Delete(id)
 		}
 
-		return c.Redirect().To("/")
-	})
+		if !wantsJSON(c) {
+			return c.Redirect().To("/")
+		}
 
-	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
-		DisableStartupMessage: true,
-	}))
+		return c.JSON(map[string]any{
+			"todos": store.List(),
+		})
+	})
+}
+
+func wantsJSON(c fiber.Ctx) bool {
+	return strings.Contains(c.Get(fiber.HeaderAccept), fiber.MIMEApplicationJSON)
 }

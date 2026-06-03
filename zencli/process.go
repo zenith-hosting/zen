@@ -53,7 +53,7 @@ func (p ManagedProcess) Run(ctx context.Context) error {
 
 	waitErr := cmd.Wait()
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		if err := <-done; err != nil {
 			return err
 		}
