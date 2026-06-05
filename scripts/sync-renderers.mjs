@@ -14,7 +14,7 @@ const files = [
 ];
 
 const sourceDir = join(repoRoot, "js");
-const targetDir = join(repoRoot, "zencli", "init_template", "frontend", ".zen");
+const targetDir = join(repoRoot, "zencli", "internal", "zencli", "init_template", "frontend", ".zen");
 
 async function read(path) {
   return readFile(path, "utf8");
@@ -46,6 +46,10 @@ async function main() {
     }
 
     stale.push(file);
+
+    await mkdir(dirname(targetPath), {
+      recursive: true
+    });
 
     await writeFile(targetPath, source);
   }

@@ -1,4 +1,4 @@
-module github.com/zenith/zen
+module github.com/zenith-hosting/zen
 
 go 1.25.0
 

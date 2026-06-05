@@ -1,10 +1,10 @@
-module github.com/zenith/zen/examples/todo
+module github.com/zenith-hosting/zen/examples/todo
 
 go 1.25.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/zenith/zen v0.0.0
+	github.com/zenith-hosting/zen v0.0.0
 )
 
 require (
@@ -42,4 +42,4 @@ require (
 
 tool github.com/air-verse/air
 
-replace github.com/zenith/zen => ../..
+replace github.com/zenith-hosting/zen => ../..

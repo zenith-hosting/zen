@@ -77,7 +77,7 @@ node --test js/*.test.mjs
 Build the Zen CLI:
 
 ```bash
-go build -o ./bin/zen ./cmd/zen
+go build -o ./bin/zen ./zencli
 ```
 
 Run the example app in development:
@@ -568,7 +568,7 @@ node --test js/*.test.mjs
 When changing the CLI, also run:
 
 ```bash
-go build -o ./bin/zen ./cmd/zen
+go build -o ./bin/zen ./zencli
 ```
 
 When changing starter templates, validate:

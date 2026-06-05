@@ -1,0 +1,3 @@
+[submodule "zencli"]
+	path = zencli
+	url = https://github.com/zenith-hosting/zencli.git

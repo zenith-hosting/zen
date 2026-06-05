@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/zenith/zen/internal/testutil"
+	"github.com/zenith-hosting/zen/internal/testutil"
 )
 
 func TestStaticReturnsFiberHandlerForClientDist(t *testing.T) {
