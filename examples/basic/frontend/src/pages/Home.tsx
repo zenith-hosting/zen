@@ -1,3 +1,5 @@
+import Counter from "../islands/Counter";
+
 type HomeProps = {
   title?: string;
   body?: string;
@@ -32,6 +34,10 @@ export default function Home(props: HomeProps) {
             Submit
           </button>
         </form>
+
+        <div class="mt-1 px-5 py-3 font-semibold text-zinc-950">
+          <Counter count={1} />
+        </div>
 
         <a class="mt-8 inline-block text-zinc-300 underline" href="/users/42">
           Visit dynamic Fiber route
