@@ -7,38 +7,79 @@ type PageModule = {
 };
 
 type HydrationData = {
-  page: string;
+  page?: string;
+  island?: string;
   props: Record<string, unknown>;
 };
 
-const modules = import.meta.glob<PageModule>("../../src/pages/**/*.tsx", {
+const pageModules = import.meta.glob<PageModule>("../../src/pages/**/*.tsx", {
   eager: true
 });
 
 const pages = Object.fromEntries(
-  Object.entries(modules).map(([path, mod]) => [
+  Object.entries(pageModules).map(([path, mod]) => [
     path.replace("../../src/pages/", "").replace(/\.tsx$/, ""),
     mod.default
   ])
 );
 
-const element = document.getElementById("__ZEN_DATA__");
+const islandModules = import.meta.glob<PageModule>("../../src/islands/**/*.tsx", {
+  eager: true
+});
 
-if (!element || !element.textContent) {
-  throw new Error("Missing Zen hydration data");
+const islands = Object.fromEntries(
+  Object.entries(islandModules).map(([path, mod]) => [
+    path.replace("../../src/islands/", "").replace(/\.tsx$/, ""),
+    mod.default
+  ])
+);
+
+function hydratePage() {
+  const element = document.getElementById("__ZEN_DATA__");
+
+  if (!element) {
+    return;
+  }
+
+  if (!element.textContent) {
+    throw new Error("Missing Zen hydration data");
+  }
+
+  const data = JSON.parse(element.textContent) as HydrationData;
+  const Page = pages[data.page ?? ""];
+
+  if (!Page) {
+    throw new Error(`Unknown page: ${data.page}`);
+  }
+
+  const app = document.getElementById("app");
+
+  if (!app) {
+    throw new Error("Missing app element");
+  }
+
+  hydrate(<Page {...data.props} />, app);
 }
 
-const data = JSON.parse(element.textContent) as HydrationData;
-const Page = pages[data.page];
+function hydrateIslands() {
+  for (const root of document.querySelectorAll<HTMLElement>("[data-zen-island-root]")) {
+    const mount = root.querySelector<HTMLElement>("[data-zen-island]");
+    const element = root.querySelector<HTMLScriptElement>("[data-zen-island-props]");
 
-if (!Page) {
-  throw new Error(`Unknown page: ${data.page}`);
+    if (!mount || !element || !element.textContent) {
+      throw new Error("Missing Zen island hydration data");
+    }
+
+    const data = JSON.parse(element.textContent) as HydrationData;
+    const Island = islands[data.island ?? ""];
+
+    if (!Island) {
+      throw new Error(`Unknown island: ${data.island}`);
+    }
+
+    hydrate(<Island {...data.props} />, mount);
+  }
 }
 
-const app = document.getElementById("app");
-
-if (!app) {
-  throw new Error("Missing app element");
-}
-
-hydrate(<Page {...data.props} />, app);
+hydratePage();
+hydrateIslands();

@@ -21,6 +21,7 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 		"frontend/vite.config.ts",
 		"frontend/index.html",
 		"frontend/src/app.css",
+		"frontend/src/islands/Counter.tsx",
 		"frontend/src/pages/Home.tsx",
 		"frontend/src/pages/User.tsx",
 		"frontend/.zen/entries/entry-client.tsx",
@@ -57,6 +58,34 @@ func TestStarterZenEntriesDiscoverPagesWithViteGlob(t *testing.T) {
 	}
 }
 
+func TestStarterZenEntriesDiscoverAndHydrateIslands(t *testing.T) {
+	files := starterFiles()
+	server := files["frontend/.zen/entries/entry-server.tsx"]
+	client := files["frontend/.zen/entries/entry-client.tsx"]
+
+	for _, want := range []string{
+		`../../src/islands/**/*.tsx`,
+		`request.mode ?? "page"`,
+		`mode === "island"`,
+		`Unknown island: ${request.island}`,
+	} {
+		if !strings.Contains(server, want) {
+			t.Fatalf("entry-server.tsx missing %q\n%s", want, server)
+		}
+	}
+
+	for _, want := range []string{
+		`../../src/islands/**/*.tsx`,
+		`[data-zen-island-root]`,
+		`[data-zen-island-props]`,
+		`data-zen-island`,
+	} {
+		if !strings.Contains(client, want) {
+			t.Fatalf("entry-client.tsx missing %q\n%s", want, client)
+		}
+	}
+}
+
 func TestStarterTemplateSourceFilesExist(t *testing.T) {
 	for path := range starterFiles() {
 		sourcePath := path
@@ -79,7 +108,8 @@ func TestStarterMainUsesHTTPRenderer(t *testing.T) {
 		`github.com/gofiber/fiber/v3`,
 		`github.com/zenith/zen/zen`,
 		`RenderURL:`,
-		`renderer.Render`,
+		`renderer.RenderPage`,
+		`renderer.RenderIsland`,
 		`/__zen/render`,
 	} {
 		if !strings.Contains(main, want) {

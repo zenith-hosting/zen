@@ -28,6 +28,13 @@ async function createViteFixture() {
 
   await writeFile(join(src, "entry-server.js"), `
     export async function render(request) {
+      if (request.mode === "island") {
+        return {
+          html: '<button data-island="' + request.island + '">' + request.props.count + '</button>',
+          head: ''
+        };
+      }
+
       return {
         html: '<main data-page="' + request.page + '">' + request.props.title + '</main>',
         head: ''
@@ -83,7 +90,7 @@ async function waitForViteHMR(port) {
   }
 }
 
-test("dev renderer renders through vite", async () => {
+test("dev renderer renders page and island requests through vite", async () => {
   const root = await createViteFixture();
   const port = 4781;
 
@@ -122,6 +129,26 @@ test("dev renderer renders through vite", async () => {
 
     assert.equal(res.status, 200);
     assert.equal(body.html, `<main data-page="Home">Hello</main>`);
+
+    const islandRes = await fetch(`http://127.0.0.1:${port}/__zen/render`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        mode: "island",
+        url: "/counter",
+        island: "Counter",
+        props: {
+          count: 0
+        }
+      })
+    });
+
+    const islandBody = await islandRes.json();
+
+    assert.equal(islandRes.status, 200);
+    assert.equal(islandBody.html, `<button data-island="Counter">0</button>`);
   } finally {
     child.kill();
     await once(child, "exit");

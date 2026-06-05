@@ -95,9 +95,15 @@ func main() {
 	}
 
 	app.Get("/", func(c fiber.Ctx) error {
-		return renderer.Render(c, "Todo", map[string]any{
+		return renderer.RenderPage(c, "Todo", map[string]any{
 			"todos": store.List(),
 		}, zen.WithTitle("Todo List"))
+	})
+
+	app.Get("/islands/counter", func(c fiber.Ctx) error {
+		return renderer.RenderIsland(c, "Counter", map[string]any{
+			"count": 0,
+		})
 	})
 
 	registerTodoRoutes(app, store)

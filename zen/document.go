@@ -16,6 +16,15 @@ type documentInput struct {
 	DevScripts    []string
 }
 
+type islandFragmentInput struct {
+	Island        string
+	HTML          string
+	HydrationJSON string
+	Styles        []string
+	Scripts       []string
+	DevScripts    []string
+}
+
 func renderDocument(input documentInput) string {
 	var b strings.Builder
 
@@ -62,6 +71,41 @@ func renderDocument(input documentInput) string {
 
 	b.WriteString("</body>\n")
 	b.WriteString("</html>\n")
+
+	return b.String()
+}
+
+func renderIslandFragment(input islandFragmentInput) string {
+	var b strings.Builder
+
+	for _, href := range input.Styles {
+		b.WriteString(`<link rel="stylesheet" href="`)
+		b.WriteString(html.EscapeString(href))
+		b.WriteString(`">` + "\n")
+	}
+
+	b.WriteString(`<div data-zen-island-root>`)
+	b.WriteString(`<div data-zen-island="`)
+	b.WriteString(html.EscapeString(input.Island))
+	b.WriteString(`">`)
+	b.WriteString(input.HTML)
+	b.WriteString("</div>")
+	b.WriteString(`<script type="application/json" data-zen-island-props>`)
+	b.WriteString(input.HydrationJSON)
+	b.WriteString("</script>")
+	b.WriteString("</div>\n")
+
+	for _, src := range input.DevScripts {
+		b.WriteString(`<script type="module" src="`)
+		b.WriteString(html.EscapeString(src))
+		b.WriteString(`"></script>` + "\n")
+	}
+
+	for _, src := range input.Scripts {
+		b.WriteString(`<script type="module" src="`)
+		b.WriteString(html.EscapeString(src))
+		b.WriteString(`"></script>` + "\n")
+	}
 
 	return b.String()
 }

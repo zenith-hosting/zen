@@ -62,6 +62,47 @@ func TestHTTPSSRClientRendersPage(t *testing.T) {
 	}
 }
 
+func TestHTTPSSRClientSerializesIslandMode(t *testing.T) {
+	var received ssrRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+
+		w.Header().Set("content-type", "application/json")
+		_ = json.NewEncoder(w).Encode(ssrResponse{
+			HTML: "<button>Count 0</button>",
+		})
+	}))
+	defer server.Close()
+
+	client := newHTTPSSRClient(httpSSRClientConfig{
+		RenderURL: server.URL,
+		Timeout:   time.Second,
+	})
+
+	_, err := client.Render(context.Background(), ssrRequest{
+		Mode:   "island",
+		URL:    "/counter",
+		Island: "Counter",
+		Props:  map[string]int{"count": 0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected render error: %v", err)
+	}
+
+	if received.Mode != "island" {
+		t.Fatalf("expected island mode, got %q", received.Mode)
+	}
+	if received.Island != "Counter" {
+		t.Fatalf("expected island Counter, got %q", received.Island)
+	}
+	if received.Page != "" {
+		t.Fatalf("expected empty page for island render, got %q", received.Page)
+	}
+}
+
 func TestHTTPSSRClientReturnsRendererError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")

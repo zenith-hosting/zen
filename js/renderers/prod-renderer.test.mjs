@@ -62,7 +62,7 @@ test("prod renderer health endpoint works", async () => {
   }
 });
 
-test("prod renderer renders request", async () => {
+test("prod renderer renders page and island requests", async () => {
   const port = 4772;
   const child = startRenderer(okEntry, port);
 
@@ -87,6 +87,26 @@ test("prod renderer renders request", async () => {
 
     assert.equal(res.status, 200);
     assert.equal(body.html, `<main data-page="Home">Hello</main>`);
+
+    const islandRes = await fetch(`http://127.0.0.1:${port}/__zen/render`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        mode: "island",
+        url: "/counter",
+        island: "Counter",
+        props: {
+          count: 0
+        }
+      })
+    });
+
+    const islandBody = await islandRes.json();
+
+    assert.equal(islandRes.status, 200);
+    assert.equal(islandBody.html, `<button data-island="Counter">0</button>`);
   } finally {
     child.kill();
     await once(child, "exit");

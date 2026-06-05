@@ -7,9 +7,11 @@ type ssrClient interface {
 }
 
 type ssrRequest struct {
-	URL   string `json:"url"`
-	Page  string `json:"page"`
-	Props any    `json:"props"`
+	Mode   string `json:"mode,omitempty"`
+	URL    string `json:"url"`
+	Page   string `json:"page,omitempty"`
+	Island string `json:"island,omitempty"`
+	Props  any    `json:"props"`
 }
 
 type ssrResponse struct {

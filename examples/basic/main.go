@@ -41,7 +41,7 @@ func main() {
 	}
 
 	app.Get("/", func(c fiber.Ctx) error {
-		return renderer.Render(c, "Home", map[string]any{
+		return renderer.RenderPage(c, "Home", map[string]any{
 			"title": "Zen Basic Example",
 			"body":  "Fiber route, Preact page, Vite renderer. No pipe slop.",
 		}, zen.WithTitle("Home"))
@@ -50,9 +50,15 @@ func main() {
 	app.Get("/users/:id", func(c fiber.Ctx) error {
 		id := c.Params("id")
 
-		return renderer.Render(c, "User", map[string]any{
+		return renderer.RenderPage(c, "User", map[string]any{
 			"id": id,
 		}, zen.WithTitle("User "+id))
+	})
+
+	app.Get("/islands/counter", func(c fiber.Ctx) error {
+		return renderer.RenderIsland(c, "Counter", map[string]any{
+			"count": 0,
+		})
 	})
 
 	app.Post("/contact", func(c fiber.Ctx) error {
