@@ -5,10 +5,25 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
-func runInit(_ context.Context, root string, _ io.Writer, _ io.Writer) error {
+var requiredTools = []string{"go", "node", "pnpm"}
+
+var postInitCommands = [][]string{
+	{"go", "mod", "tidy"},
+	{"pnpm", "--dir", "frontend", "install"},
+	{"pnpm", "--dir", "frontend", "approve-builds", "--all"},
+}
+
+func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Writer) error {
+	for _, tool := range requiredTools {
+		if _, err := exec.LookPath(tool); err != nil {
+			return fmt.Errorf("zen init: required tool %q was not found in PATH", tool)
+		}
+	}
+
 	for path := range starterFiles() {
 		fullPath := filepath.Join(root, path)
 
@@ -29,6 +44,19 @@ func runInit(_ context.Context, root string, _ io.Writer, _ io.Writer) error {
 
 		if err := os.WriteFile(fullPath, []byte(contents), 0o644); err != nil {
 			return err
+		}
+	}
+
+	for _, cmd := range postInitCommands {
+		proc := ManagedProcess{
+			Name:    cmd[0],
+			Command: ProcessCommand{Name: cmd[0], Args: cmd[1:]},
+			Stdout:  stdout,
+			Stderr:  stderr,
+		}
+
+		if err := proc.Run(ctx); err != nil {
+			return fmt.Errorf("zen init: failed to run %v: %w", cmd, err)
 		}
 	}
 
