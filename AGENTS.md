@@ -31,7 +31,7 @@ Browser
   -> renderer.Render(c, "Page", props)
   -> HTTP call to Node renderer
   -> Vite/Preact SSR
-  -> Zen document assembly
+  -> Zen injects SSR output into frontend/index.html
   -> browser hydrates Preact page
 ```
 
@@ -305,6 +305,78 @@ node scripts/sync-renderers.mjs
 
 ---
 
+## HTML Document Template Rules
+
+Full-page responses are assembled from the developer-owned frontend document template:
+
+```text
+frontend/index.html
+```
+
+`Config.DocumentPath` defaults to:
+
+```text
+<ProjectRoot>/<frontendDir>/index.html
+```
+
+where `frontendDir` comes from `zen.config.json` and defaults to `frontend`.
+
+The Go renderer reads this template for `RenderPage`, replaces Zen slots, and sends the final HTML response. Keep this as simple string slot replacement. Do not introduce an HTML parser, metadata DSL, layout system, Vite `transformIndexHtml`, or a Next-style document API unless explicitly requested and carefully justified.
+
+Required template slots:
+
+```html
+<!--zen:title-->
+<!--zen:head-->
+<!--zen:styles-->
+<!--zen:app-->
+<!--zen:data-->
+<!--zen:scripts-->
+```
+
+Slot meanings:
+
+* `<!--zen:title-->`: escaped page title from `WithTitle` or `Config.DefaultTitle`
+* `<!--zen:head-->`: raw `head` returned by the Node renderer
+* `<!--zen:styles-->`: production CSS links from the Vite manifest
+* `<!--zen:app-->`: raw Preact SSR HTML
+* `<!--zen:data-->`: Go-generated safe hydration JSON script using `Config.DataElementID`
+* `<!--zen:scripts-->`: Vite dev scripts or production client entry scripts
+
+The starter and examples should keep this shape:
+
+```html
+<div id="app"><!--zen:app--></div>
+<!--zen:data-->
+<!--zen:scripts-->
+```
+
+The current frontend hydration entry looks for:
+
+```text
+document.getElementById("app")
+document.getElementById("__ZEN_DATA__")
+```
+
+Do not change the template IDs without also changing the hydration entry and tests.
+
+`RenderIsland` is intentionally separate. It returns a hydratable fragment from `renderIslandFragment`; it should not read or inject `frontend/index.html`.
+
+When changing document template behavior, update:
+
+```text
+document.go
+document_test.go
+render.go
+render_test.go
+zencli/internal/zencli/init_template/frontend/index.html
+zencli/internal/zencli/init_templates_test.go
+examples/basic/frontend/index.html
+examples/todo/frontend/index.html
+```
+
+---
+
 ## HTTP Renderer Protocol
 
 The Go app calls the renderer over HTTP.
@@ -341,6 +413,8 @@ Successful response:
   "head": ""
 }
 ```
+
+The HTTP protocol stops here. The Node renderer returns fragments and optional head HTML; Go owns template slot injection and the final full document response.
 
 Error response:
 
@@ -385,6 +459,8 @@ frontend/.zen/renderers/renderer-shared.mjs
 frontend/.zen/renderers/dev-renderer.mjs
 frontend/.zen/renderers/prod-renderer.mjs
 ```
+
+`frontend/index.html` must include the required Zen document slots listed in "HTML Document Template Rules". It should not hard-code a direct `.zen/entries/entry-client.tsx` script tag; Zen injects the dev or production client scripts into `<!--zen:scripts-->`.
 
 Then it should install dependencies, leaving the user with a working project:
 
@@ -631,6 +707,8 @@ curl -i http://127.0.0.1:3000/
 ```
 
 In dev output, the HTML should include Vite client scripts.
+
+The response should preserve the surrounding `frontend/index.html` template shell and include SSR HTML in `<!--zen:app-->`.
 
 In production output, the HTML should not include:
 
