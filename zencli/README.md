@@ -30,8 +30,6 @@ Create a complete starter app:
 
 ```bash
 zen init
-go mod tidy
-pnpm --dir frontend install
 zen dev
 ```
 
@@ -57,14 +55,7 @@ zen start
 
 ## Starter Project
 
-`zen init` writes a runnable Fiber, Vite, Preact, Tailwind, and Air app. It refuses to overwrite existing files.
-
-After init, users are expected to run:
-
-```bash
-go mod tidy
-pnpm --dir frontend install
-```
+`zen init` writes a runnable Fiber, Vite, Preact, Tailwind, and Air app. It refuses to overwrite existing files, then runs `go mod tidy`, `pnpm --dir frontend install`, and `pnpm --dir frontend approve-builds --all`.
 
 The generated app imports:
 

@@ -8,5 +8,5 @@ import (
 )
 
 func (r *Renderer) Static() fiber.Handler {
-	return static.New(filepath.Join(r.config.ClientDist, "assets"))
+	return static.New(filepath.Join(r.config.clientDist, "assets"))
 }

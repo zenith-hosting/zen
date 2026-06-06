@@ -18,16 +18,8 @@ func main() {
 
 	cfg := zen.Config{
 		Dev:           dev,
-		ViteURL:       "http://localhost:5173",
-		RenderURL:     "http://localhost:5173/__zen/render",
-		ClientDist:    "./frontend/dist/client",
-		Manifest:      "./frontend/dist/client/.vite/manifest.json",
 		DefaultTitle:  "Zen App",
 		RenderTimeout: 5 * time.Second,
-	}
-
-	if !dev {
-		cfg.RenderURL = "http://127.0.0.1:4174/__zen/render"
 	}
 
 	renderer, err := zen.New(cfg)

@@ -109,13 +109,23 @@ func TestStarterMainUsesHTTPRenderer(t *testing.T) {
 	for _, want := range []string{
 		`github.com/gofiber/fiber/v3`,
 		`github.com/zenith-hosting/zen`,
-		`RenderURL:`,
 		`renderer.RenderPage`,
 		`renderer.RenderIsland`,
-		`/__zen/render`,
 	} {
 		if !strings.Contains(main, want) {
 			t.Fatalf("main.go missing %q\n%s", want, main)
+		}
+	}
+
+	for _, old := range []string{
+		`ViteURL:`,
+		`RenderURL:`,
+		`ClientDist:`,
+		`Manifest:`,
+		`/__zen/render`,
+	} {
+		if strings.Contains(main, old) {
+			t.Fatalf("main.go should not hard-code %q when zen.config.json owns renderer settings\n%s", old, main)
 		}
 	}
 }

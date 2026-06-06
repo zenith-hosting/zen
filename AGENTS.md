@@ -106,15 +106,10 @@ Initialize a new project:
 
 ```bash
 zen init
-```
-
-After `zen init`, users generally need:
-
-```bash
-go mod tidy
-pnpm --dir frontend install
 zen dev
 ```
+
+`zen init` runs `go mod tidy`, `pnpm --dir frontend install`, and `pnpm --dir frontend approve-builds --all` after writing files.
 
 ---
 
@@ -619,8 +614,6 @@ When changing starter templates, validate:
 tmpdir="$(mktemp -d)"
 cd "$tmpdir"
 /path/to/zen/bin/zen init
-go mod tidy
-pnpm --dir frontend install
 /path/to/zen/bin/zen dev
 ```
 

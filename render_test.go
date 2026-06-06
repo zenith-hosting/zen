@@ -22,12 +22,12 @@ func TestNewRendererAppliesDefaults(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if r.config.ViteURL != "http://localhost:5173" {
-		t.Fatalf("expected default vite url, got %q", r.config.ViteURL)
+	if r.config.viteURL != "http://localhost:5173" {
+		t.Fatalf("expected default vite url, got %q", r.config.viteURL)
 	}
 
-	if r.config.RenderURL != "http://localhost:5173/__zen/render" {
-		t.Fatalf("expected default render url, got %q", r.config.RenderURL)
+	if r.config.renderURL != "http://localhost:5173/__zen/render" {
+		t.Fatalf("expected default render url, got %q", r.config.renderURL)
 	}
 
 	if r.ssr == nil {
@@ -54,7 +54,7 @@ func TestRenderWritesSSRDocumentToFiberResponse(t *testing.T) {
 	r := &Renderer{
 		config: Config{
 			Dev:           true,
-			ViteURL:       "http://localhost:5173",
+			viteURL:       "http://localhost:5173",
 			AppElementID:  "app",
 			DataElementID: "__ZEN_DATA__",
 			DefaultTitle:  "Zen",
@@ -96,7 +96,7 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 	r := &Renderer{
 		config: Config{
 			Dev:           true,
-			ViteURL:       "http://localhost:5173",
+			viteURL:       "http://localhost:5173",
 			AppElementID:  "app",
 			DataElementID: "__ZEN_DATA__",
 			DefaultTitle:  "Zen",
@@ -134,7 +134,7 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 	r := &Renderer{
 		config: Config{
 			Dev:           true,
-			ViteURL:       "http://localhost:5173",
+			viteURL:       "http://localhost:5173",
 			AppElementID:  "app",
 			DataElementID: "__ZEN_DATA__",
 			DefaultTitle:  "Zen",
@@ -282,9 +282,8 @@ func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 
 	r, err := New(Config{
 		Dev:        false,
-		RenderURL:  "http://127.0.0.1:4174/__zen/render",
-		ClientDist: dir,
-		Manifest:   manifestPath,
+		clientDist: dir,
+		manifest:   manifestPath,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -299,7 +298,7 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 	r := &Renderer{
 		config: Config{
 			Dev:           true,
-			ViteURL:       "http://localhost:5173",
+			viteURL:       "http://localhost:5173",
 			AppElementID:  "app",
 			DataElementID: "__ZEN_DATA__",
 			DefaultTitle:  "Zen",
@@ -335,8 +334,8 @@ func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
 	r := &Renderer{
 		config: Config{
 			Dev:           true,
-			ViteURL:       "http://localhost:5173",
-			RenderURL:     server.URL,
+			viteURL:       "http://localhost:5173",
+			renderURL:     server.URL,
 			AppElementID:  "app",
 			DataElementID: "__ZEN_DATA__",
 			DefaultTitle:  "Zen",

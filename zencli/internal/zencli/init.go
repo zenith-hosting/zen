@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-var requiredTools = []string{"go", "node", "pnpm"}
+var requiredInitTools = []string{"go", "node", "pnpm"}
 
 var postInitCommands = [][]string{
 	{"go", "mod", "tidy"},
@@ -18,7 +18,7 @@ var postInitCommands = [][]string{
 }
 
 func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Writer) error {
-	for _, tool := range requiredTools {
+	for _, tool := range requiredInitTools {
 		if _, err := exec.LookPath(tool); err != nil {
 			return fmt.Errorf("zen init: required tool %q was not found in PATH", tool)
 		}
@@ -49,10 +49,14 @@ func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Write
 
 	for _, cmd := range postInitCommands {
 		proc := ManagedProcess{
-			Name:    cmd[0],
-			Command: ProcessCommand{Name: cmd[0], Args: cmd[1:]},
-			Stdout:  stdout,
-			Stderr:  stderr,
+			Name: cmd[0],
+			Command: ProcessCommand{
+				Name: cmd[0],
+				Args: cmd[1:],
+				Dir:  root,
+			},
+			Stdout: stdout,
+			Stderr: stderr,
 		}
 
 		if err := proc.Run(ctx); err != nil {

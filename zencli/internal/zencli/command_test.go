@@ -41,6 +41,7 @@ func TestRunRejectsUnknownCommand(t *testing.T) {
 
 func TestRunInitCommandCreatesStarter(t *testing.T) {
 	dir := t.TempDir()
+	withFakeInitTools(t)
 
 	old, err := os.Getwd()
 	if err != nil {

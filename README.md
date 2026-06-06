@@ -46,15 +46,8 @@ func main() {
 
 	cfg := zen.Config{
 		Dev:           dev,
-		ViteURL:       "http://localhost:5173",
-		RenderURL:     "http://localhost:5173/__zen/render",
-		ClientDist:    "./frontend/dist/client",
-		Manifest:      "./frontend/dist/client/.vite/manifest.json",
 		DefaultTitle:  "Zen App",
 		RenderTimeout: 5 * time.Second,
-	}
-	if !dev {
-		cfg.RenderURL = "http://127.0.0.1:4174/__zen/render"
 	}
 
 	renderer, err := zen.New(cfg)
@@ -77,12 +70,14 @@ func main() {
 }
 ```
 
-The Go app calls a Node renderer over HTTP:
+The Go app reads renderer ports and frontend paths from `zen.config.json`, then calls the Node renderer over HTTP:
 
 ```text
 POST /__zen/render
 GET  /__zen/health
 ```
+
+If the app does not run from the project root, set `ProjectRoot` in `zen.Config` so Zen can find `zen.config.json`.
 
 ## CLI Workflow
 
@@ -90,10 +85,10 @@ Create a starter project:
 
 ```bash
 zen init
-go mod tidy
-pnpm --dir frontend install
 zen dev
 ```
+
+`zen init` writes the starter project, runs `go mod tidy`, installs frontend dependencies, and approves required pnpm builds.
 
 Build and start production artifacts:
 

@@ -41,13 +41,13 @@ func New(config Config) (*Renderer, error) {
 	r := &Renderer{
 		config: cfg,
 		ssr: newHTTPSSRClient(httpSSRClientConfig{
-			RenderURL: cfg.RenderURL,
+			RenderURL: cfg.renderURL,
 			Timeout:   cfg.RenderTimeout,
 		}),
 	}
 
 	if !cfg.Dev {
-		manifest, err := readManifest(cfg.Manifest)
+		manifest, err := readManifest(cfg.manifest)
 		if err != nil {
 			return nil, err
 		}
@@ -175,8 +175,8 @@ func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options .
 func (r *Renderer) clientEntryAssets() (clientAssets, []string, error) {
 	if r.config.Dev {
 		return clientAssets{}, []string{
-			r.config.ViteURL + "/@vite/client",
-			r.config.ViteURL + "/.zen/entries/entry-client.tsx",
+			r.config.viteURL + "/@vite/client",
+			r.config.viteURL + "/.zen/entries/entry-client.tsx",
 		}, nil
 	}
 

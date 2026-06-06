@@ -24,7 +24,7 @@ func TestStaticReturnsFiberHandlerForClientDist(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			ClientDist: dir,
+			clientDist: dir,
 		},
 	}
 
