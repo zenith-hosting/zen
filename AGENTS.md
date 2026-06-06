@@ -71,7 +71,8 @@ go test ./...
 Run Node renderer tests:
 
 ```bash
-node --test js/*.test.mjs
+node --test js/renderers/*.test.mjs
+node --test scripts/*.test.mjs
 ```
 
 Build the Zen CLI:
@@ -122,11 +123,7 @@ zen dev
 Expected high-level structure:
 
 ```text
-cmd/
-  zen/
-    main.go
-
-zen/
+.
   config.go
   render.go
   document.go
@@ -137,21 +134,20 @@ zen/
   ssr_http_client.go
 
 zencli/
-  command.go
-  config.go
-  dev.go
-  start.go
-  build.go
-  init.go
-  init_templates.go
-  process.go
-  health.go
-  logs.go
+  <git submodule: github.com/zenith-hosting/zencli>
+  go.mod
+  main.go
+  internal/
+    zencli/
 
 js/
-  renderer-shared.mjs
-  dev-renderer.mjs
-  prod-renderer.mjs
+  entries/
+    entry-client.tsx
+    entry-server.tsx
+  renderers/
+    renderer-shared.mjs
+    dev-renderer.mjs
+    prod-renderer.mjs
 
 examples/
   basic/
@@ -163,6 +159,20 @@ examples/
       vite.config.ts
       src/
 ```
+
+The root Go module is:
+
+```text
+github.com/zenith-hosting/zen
+```
+
+The CLI is a separate repository mounted as a submodule:
+
+```text
+github.com/zenith-hosting/zencli
+```
+
+Do not move CLI code back into the root Zen module. The root module should stay usable as a library dependency without pulling in CLI implementation code.
 
 ---
 
@@ -278,6 +288,25 @@ import { createServer as createViteServer } from "vite";
 
 Do not move renderer runtime files back to root `.zen/renderers` unless dependency resolution is redesigned.
 
+Canonical renderer and entry sources live in:
+
+```text
+js/entries/
+js/renderers/
+```
+
+The starter-template copies live in the `zencli` submodule:
+
+```text
+zencli/internal/zencli/init_template/frontend/.zen/
+```
+
+After changing renderer or entry source files, run:
+
+```bash
+node scripts/sync-renderers.mjs
+```
+
 ---
 
 ## HTTP Renderer Protocol
@@ -359,6 +388,14 @@ frontend/.zen/entries/entry-server.tsx
 frontend/.zen/renderers/renderer-shared.mjs
 frontend/.zen/renderers/dev-renderer.mjs
 frontend/.zen/renderers/prod-renderer.mjs
+```
+
+Then it should install dependencies, leaving the user with a working project:
+
+```sh
+go mod tidy
+pnpm --dir frontend install
+pnpm --dir frontend approve-builds --all
 ```
 
 `zen init` should refuse to overwrite existing files.
@@ -471,7 +508,8 @@ go test ./...
 For Node renderer behavior:
 
 ```bash
-node --test js/*.test.mjs
+node --test js/renderers/*.test.mjs
+node --test scripts/*.test.mjs
 ```
 
 For CLI behavior, prefer small tests around pure planning functions:
@@ -480,9 +518,15 @@ For CLI behavior, prefer small tests around pure planning functions:
 * `startPlan`
 * `buildPlan`
 * `starterFiles`
-* `ensureRuntimeFiles`
 * `ensureFrontendDependencies`
 * `ensureProductionArtifacts`
+
+CLI tests live in the `zencli` submodule. Run them from the submodule or through the workspace:
+
+```bash
+cd zencli
+go test ./...
+```
 
 Avoid tests that require starting long-running processes unless the behavior cannot be tested another way.
 
@@ -496,17 +540,13 @@ Prefer small units with boring names.
 
 Do not add clever abstractions around simple tool invocations.
 
-Do not introduce a plugin system yet.
+Do not introduce a plugin system.
 
-Do not introduce a route system yet.
+Do not introduce a route system.
 
-Do not introduce a form system yet.
+Do not introduce a form system.
 
-Do not introduce generated frontend types yet unless explicitly requested.
-
-Do not introduce islands yet unless explicitly requested.
-
-Do not introduce streaming SSR yet unless explicitly requested.
+Do not introduce generated frontend types.
 
 Do not turn Zen into Next.js with a Go accent.
 
@@ -562,7 +602,8 @@ Run:
 
 ```bash
 go test ./...
-node --test js/*.test.mjs
+node --test js/renderers/*.test.mjs
+node --test scripts/*.test.mjs
 ```
 
 When changing the CLI, also run:
@@ -570,6 +611,8 @@ When changing the CLI, also run:
 ```bash
 go build -o ./bin/zen ./zencli
 ```
+
+Because `zencli` is a submodule, commit and push CLI changes inside `zencli` first, then update the parent repo's submodule pointer.
 
 When changing starter templates, validate:
 
