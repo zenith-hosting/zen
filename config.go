@@ -16,6 +16,7 @@ type Config struct {
 	RenderTimeout time.Duration
 
 	ProjectRoot string
+	DocumentPath string
 
 	AppElementID  string
 	DataElementID string
@@ -85,6 +86,10 @@ func (c Config) withDefaults() Config {
 	}
 
 	frontendDir := filepath.Join(root, project.FrontendDir)
+
+	if c.DocumentPath == "" {
+		c.DocumentPath = filepath.Join(frontendDir, "index.html")
+	}
 
 	if c.Dev {
 		if c.viteURL == "" {
