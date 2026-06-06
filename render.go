@@ -3,6 +3,9 @@ package zen
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -103,9 +106,14 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 		return err
 	}
 
-	doc := renderDocument(documentInput{
+	template, err := r.documentTemplate()
+	if err != nil {
+		return err
+	}
+
+	doc, err := renderDocumentTemplate(template, documentInput{
 		Title:         opts.Title,
-		AppElementID:  r.config.AppElementID,
+		Head:          res.Head,
 		DataElementID: r.config.DataElementID,
 		HTML:          res.HTML,
 		HydrationJSON: hydrationJSON,
@@ -113,9 +121,31 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 		Scripts:       assets.Scripts,
 		DevScripts:    devScripts,
 	})
+	if err != nil {
+		if strings.TrimSpace(r.config.DocumentPath) == "" {
+			return err
+		}
+		return fmt.Errorf("zen: invalid document template %s: %w", r.config.DocumentPath, err)
+	}
 
 	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
 	return c.Status(opts.Status).SendString(doc)
+}
+
+func (r *Renderer) documentTemplate() (string, error) {
+	if strings.TrimSpace(r.config.DocumentPath) == "" {
+		return defaultDocumentTemplate, nil
+	}
+
+	raw, err := os.ReadFile(r.config.DocumentPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("zen: missing document template %s.\n\nRun:\n  zen init", r.config.DocumentPath)
+		}
+		return "", fmt.Errorf("zen: read document template %s: %w", r.config.DocumentPath, err)
+	}
+
+	return string(raw), nil
 }
 
 func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options ...RenderOption) error {

@@ -124,6 +124,83 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 	}
 }
 
+func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
+	dir := t.TempDir()
+	documentPath := filepath.Join(dir, "index.html")
+	template := `<!doctype html>
+<html lang="en">
+<head>
+<title><!--zen:title--></title>
+<!--zen:head-->
+<!--zen:styles-->
+</head>
+<body class="custom-shell">
+<div id="app"><!--zen:app--></div>
+<!--zen:data-->
+<!--zen:scripts-->
+</body>
+</html>`
+
+	if err := os.WriteFile(documentPath, []byte(template), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	client := &fakeSSRClient{
+		res: ssrResponse{
+			HTML: `<main><h1>Hello</h1></main>`,
+			Head: `<meta name="description" content="From renderer">`,
+		},
+	}
+
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			viteURL:       "http://localhost:5173",
+			DocumentPath:  documentPath,
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: client,
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.RenderPage(c, "Home", map[string]string{"title": "Hello"}, WithTitle("Custom <Title>"))
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+	body := testutil.ReadBody(t, res)
+
+	for _, want := range []string{
+		`<body class="custom-shell">`,
+		`<title>Custom &lt;Title&gt;</title>`,
+		`<meta name="description" content="From renderer">`,
+		`<div id="app"><main><h1>Hello</h1></main></div>`,
+		`http://localhost:5173/@vite/client`,
+		`http://localhost:5173/.zen/entries/entry-client.tsx`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q\n%s", want, body)
+		}
+	}
+}
+
+func TestRendererDocumentTemplateReportsMissingFile(t *testing.T) {
+	r := &Renderer{
+		config: Config{
+			DocumentPath: filepath.Join(t.TempDir(), "missing.html"),
+		},
+	}
+
+	_, err := r.documentTemplate()
+	if err == nil {
+		t.Fatal("expected missing document template error")
+	}
+	if !strings.Contains(err.Error(), "zen: missing document template") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 	client := &fakeSSRClient{
 		res: ssrResponse{

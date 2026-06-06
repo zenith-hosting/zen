@@ -30,6 +30,10 @@ func TestConfigWithDefaultsDevUsesZenConfigDefaults(t *testing.T) {
 		t.Fatalf("expected data element id __ZEN_DATA__, got %q", got.DataElementID)
 	}
 
+	if got.DocumentPath != filepath.Join(".", "frontend", "index.html") {
+		t.Fatalf("expected default document path, got %q", got.DocumentPath)
+	}
+
 	if got.RenderTimeout != 5*time.Second {
 		t.Fatalf("expected render timeout 5s, got %s", got.RenderTimeout)
 	}
@@ -58,6 +62,9 @@ func TestConfigWithDefaultsUsesZenConfigJSON(t *testing.T) {
 	if dev.renderURL != "http://localhost:5273/__zen/render" {
 		t.Fatalf("expected dev render URL from zen.config.json, got %q", dev.renderURL)
 	}
+	if dev.DocumentPath != filepath.Join(dir, "web", "index.html") {
+		t.Fatalf("expected dev document path from frontend dir, got %q", dev.DocumentPath)
+	}
 
 	prod := Config{
 		Dev:         false,
@@ -72,6 +79,22 @@ func TestConfigWithDefaultsUsesZenConfigJSON(t *testing.T) {
 	}
 	if prod.manifest != filepath.Join(dir, "web", "dist", "client", ".vite", "manifest.json") {
 		t.Fatalf("expected manifest from frontend dir, got %q", prod.manifest)
+	}
+	if prod.DocumentPath != filepath.Join(dir, "web", "index.html") {
+		t.Fatalf("expected prod document path from frontend dir, got %q", prod.DocumentPath)
+	}
+}
+
+func TestConfigWithDefaultsKeepsDocumentPathOverride(t *testing.T) {
+	cfg := Config{
+		Dev:          true,
+		DocumentPath: "custom/document.html",
+	}
+
+	got := cfg.withDefaults()
+
+	if got.DocumentPath != "custom/document.html" {
+		t.Fatalf("expected document path override, got %q", got.DocumentPath)
 	}
 }
 
