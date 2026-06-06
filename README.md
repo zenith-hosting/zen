@@ -15,13 +15,13 @@ go get github.com/zenith-hosting/zen
 The CLI is a separate project:
 
 ```bash
-go install github.com/zenith-hosting/zencli@latest
+go install github.com/zenith-hosting/zencli/cmd/zen@latest
 ```
 
-Go names the installed binary after the module path, so that command installs a `zencli` binary. Build a local `zen` binary from this repo with:
+That command installs a `zen` binary. Build a local `zen` binary from this repo with:
 
 ```bash
-go build -o ./bin/zen ./zencli
+go build -o ./bin/zen ./zencli/cmd/zen
 ```
 
 ## Usage
@@ -145,5 +145,5 @@ Run CLI checks from the submodule:
 ```bash
 cd zencli
 go test ./...
-go build -o /tmp/zen .
+go build -o /tmp/zen ./cmd/zen
 ```

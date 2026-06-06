@@ -78,7 +78,7 @@ node --test scripts/*.test.mjs
 Build the Zen CLI:
 
 ```bash
-go build -o ./bin/zen ./zencli
+go build -o ./bin/zen ./zencli/cmd/zen
 ```
 
 Run the example app in development:
@@ -136,7 +136,9 @@ Expected high-level structure:
 zencli/
   <git submodule: github.com/zenith-hosting/zencli>
   go.mod
-  main.go
+  cmd/
+    zen/
+      main.go
   internal/
     zencli/
 
@@ -609,7 +611,7 @@ node --test scripts/*.test.mjs
 When changing the CLI, also run:
 
 ```bash
-go build -o ./bin/zen ./zencli
+go build -o ./bin/zen ./zencli/cmd/zen
 ```
 
 Because `zencli` is a submodule, commit and push CLI changes inside `zencli` first, then update the parent repo's submodule pointer.
