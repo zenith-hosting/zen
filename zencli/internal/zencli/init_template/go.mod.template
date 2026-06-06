@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.0.0-rc.3
-	github.com/zenith-hosting/zen v0.0.1
+	github.com/zenith-hosting/zen v0.0.2
 )
 
 tool github.com/air-verse/air
