@@ -134,7 +134,6 @@ Expected high-level structure:
   ssr_http_client.go
 
 zencli/
-  <git submodule: github.com/zenith-hosting/zencli>
   go.mod
   cmd/
     zen/
@@ -168,13 +167,13 @@ The root Go module is:
 github.com/zenith-hosting/zen
 ```
 
-The CLI is a separate repository mounted as a submodule:
+The CLI is an in-repo Go module:
 
 ```text
-github.com/zenith-hosting/zencli
+github.com/zenith-hosting/zen/zencli
 ```
 
-Do not move CLI code back into the root Zen module. The root module should stay usable as a library dependency without pulling in CLI implementation code.
+Do not merge CLI implementation code into the root Zen library package. Keeping `zencli` as a separate subdirectory module lets the root module stay usable as a library dependency without CLI code.
 
 ---
 
@@ -297,7 +296,7 @@ js/entries/
 js/renderers/
 ```
 
-The starter-template copies live in the `zencli` submodule:
+The starter-template copies live in the `zencli` module:
 
 ```text
 zencli/internal/zencli/init_template/frontend/.zen/
@@ -523,7 +522,7 @@ For CLI behavior, prefer small tests around pure planning functions:
 * `ensureFrontendDependencies`
 * `ensureProductionArtifacts`
 
-CLI tests live in the `zencli` submodule. Run them from the submodule or through the workspace:
+CLI tests live in the `zencli` module. Run them from that module or through the workspace:
 
 ```bash
 cd zencli
@@ -613,8 +612,6 @@ When changing the CLI, also run:
 ```bash
 go build -o ./bin/zen ./zencli/cmd/zen
 ```
-
-Because `zencli` is a submodule, commit and push CLI changes inside `zencli` first, then update the parent repo's submodule pointer.
 
 When changing starter templates, validate:
 

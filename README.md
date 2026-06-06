@@ -12,10 +12,10 @@ Use the library from Go apps:
 go get github.com/zenith-hosting/zen
 ```
 
-The CLI is a separate project:
+The CLI lives in this repo under `zencli/`:
 
 ```bash
-go install github.com/zenith-hosting/zencli/cmd/zen@latest
+go install github.com/zenith-hosting/zen/zencli/cmd/zen@latest
 ```
 
 That command installs a `zen` binary. Build a local `zen` binary from this repo with:
@@ -112,19 +112,13 @@ This repository is the Zen library module:
 github.com/zenith-hosting/zen
 ```
 
-The CLI lives in a separate repository mounted as a submodule:
+The CLI lives in this repository as its own Go module:
 
 ```text
-zencli -> https://github.com/zenith-hosting/zencli.git
+github.com/zenith-hosting/zen/zencli
 ```
 
-After cloning this repo, initialize submodules before building the CLI:
-
-```bash
-git submodule update --init --recursive
-```
-
-Canonical frontend runtime sources are in `js/entries` and `js/renderers`. The starter-template copies live in the `zencli` submodule. Sync them with:
+Canonical frontend runtime sources are in `js/entries` and `js/renderers`. The starter-template copies live under `zencli/internal/zencli/init_template`. Sync them with:
 
 ```bash
 node scripts/sync-renderers.mjs
@@ -140,7 +134,7 @@ node --test js/renderers/*.test.mjs
 node --test scripts/*.test.mjs
 ```
 
-Run CLI checks from the submodule:
+Run CLI checks from the `zencli` module:
 
 ```bash
 cd zencli

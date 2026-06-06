@@ -1,0 +1,10 @@
+{
+  "name": "zen-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "zen dev",
+    "build": "zen build",
+    "start": "zen start"
+  }
+}
