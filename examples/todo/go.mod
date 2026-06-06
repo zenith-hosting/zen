@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/zenith-hosting/zen v0.0.0
+	github.com/zenith-hosting/zen v0.0.1
 )
 
 require (
@@ -41,5 +41,3 @@ require (
 )
 
 tool github.com/air-verse/air
-
-replace github.com/zenith-hosting/zen => ../..
