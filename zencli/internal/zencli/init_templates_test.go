@@ -38,6 +38,24 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 	}
 }
 
+func TestStarterIndexHTMLContainsZenDocumentSlots(t *testing.T) {
+	files := starterFiles()
+	index := files["frontend/index.html"]
+
+	for _, want := range []string{
+		`<!--zen:title-->`,
+		`<!--zen:head-->`,
+		`<!--zen:styles-->`,
+		`<div id="app"><!--zen:app--></div>`,
+		`<!--zen:data-->`,
+		`<!--zen:scripts-->`,
+	} {
+		if !strings.Contains(index, want) {
+			t.Fatalf("frontend/index.html missing %q\n%s", want, index)
+		}
+	}
+}
+
 func TestStarterZenEntriesDiscoverPagesWithViteGlob(t *testing.T) {
 	files := starterFiles()
 
