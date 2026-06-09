@@ -32,21 +32,6 @@ func main() {
 		app.Get("/assets/*", renderer.Static())
 	}
 
-	app.Get("/", func(c fiber.Ctx) error {
-		return renderer.RenderPage(c, "Home", map[string]any{
-			"title": "Zen App",
-			"body":  "Fiber route, Preact page, Vite renderer.",
-		}, zen.WithTitle("Home"))
-	})
-
-	app.Get("/users/:id", func(c fiber.Ctx) error {
-		id := c.Params("id")
-
-		return renderer.RenderPage(c, "User", map[string]any{
-			"id": id,
-		}, zen.WithTitle("User "+id))
-	})
-
 	app.Get("/islands/counter", func(c fiber.Ctx) error {
 		return renderer.RenderIsland(c, "Counter", map[string]any{
 			"count": 0,
@@ -60,6 +45,12 @@ func main() {
 		}
 
 		return c.Redirect().To("/")
+	})
+
+	app.Get("/*", func(c fiber.Ctx) error {
+		return renderer.RenderPage(c, "App", map[string]any{
+			"url": c.OriginalURL(),
+		}, zen.WithTitle("Zen App"))
 	})
 
 	log.Fatal(app.Listen(":3000", fiber.ListenConfig{

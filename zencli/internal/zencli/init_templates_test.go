@@ -22,6 +22,7 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 		"frontend/index.html",
 		"frontend/src/app.css",
 		"frontend/src/islands/Counter.tsx",
+		"frontend/src/pages/App.tsx",
 		"frontend/src/pages/Home.tsx",
 		"frontend/src/pages/User.tsx",
 		"frontend/.zen/entries/entry-client.tsx",
@@ -144,6 +145,53 @@ func TestStarterMainUsesHTTPRenderer(t *testing.T) {
 	} {
 		if strings.Contains(main, old) {
 			t.Fatalf("main.go should not hard-code %q when zen.config.json owns renderer settings\n%s", old, main)
+		}
+	}
+}
+
+func TestStarterUsesAppOwnedClientRouter(t *testing.T) {
+	files := starterFiles()
+	main := files["main.go"]
+	pkg := files["frontend/package.json"]
+	app := files["frontend/src/pages/App.tsx"]
+
+	for _, want := range []string{
+		`"preact-iso": "^2.12.0"`,
+	} {
+		if !strings.Contains(pkg, want) {
+			t.Fatalf("frontend/package.json missing %q\n%s", want, pkg)
+		}
+	}
+
+	for _, want := range []string{
+		`app.Get("/*", func(c fiber.Ctx) error {`,
+		`renderer.RenderPage(c, "App", map[string]any{`,
+		`"url": c.OriginalURL(),`,
+	} {
+		if !strings.Contains(main, want) {
+			t.Fatalf("main.go missing %q\n%s", want, main)
+		}
+	}
+
+	for _, old := range []string{
+		`renderer.RenderPage(c, "Home"`,
+		`renderer.RenderPage(c, "User"`,
+	} {
+		if strings.Contains(main, old) {
+			t.Fatalf("main.go should render the app shell instead of page-specific Fiber routes %q\n%s", old, main)
+		}
+	}
+
+	for _, want := range []string{
+		`import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";`,
+		`import { locationStub } from "preact-iso/prerender";`,
+		`locationStub(props.url ?? "/");`,
+		`<Route path="/" component={Home} />`,
+		`<Route path="/users/:id" component={User} />`,
+		`<Route default component={NotFound} />`,
+	} {
+		if !strings.Contains(app, want) {
+			t.Fatalf("frontend/src/pages/App.tsx missing %q\n%s", want, app)
 		}
 	}
 }
