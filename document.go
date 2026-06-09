@@ -64,15 +64,6 @@ func requiredDocumentSlots() []string {
 	}
 }
 
-func renderDocument(input documentInput) string {
-	doc, err := renderDocumentTemplate(defaultDocumentTemplate, input)
-	if err != nil {
-		panic(err)
-	}
-
-	return doc
-}
-
 func renderDocumentTemplate(template string, input documentInput) (string, error) {
 	for _, slot := range requiredDocumentSlots() {
 		if !strings.Contains(template, slot) {
