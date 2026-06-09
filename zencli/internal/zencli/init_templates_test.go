@@ -200,7 +200,7 @@ func TestStarterGoModDependsOnPublicZenModule(t *testing.T) {
 	files := starterFiles()
 	goMod := files["go.mod"]
 
-	if !strings.Contains(goMod, `github.com/zenith-hosting/zen v0.0.2`) {
+	if !strings.Contains(goMod, `github.com/zenith-hosting/zen v0.0.3`) {
 		t.Fatalf("go.mod missing public zen module version\n%s", goMod)
 	}
 }

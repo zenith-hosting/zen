@@ -4,8 +4,10 @@ go 1.25.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/zenith-hosting/zen v0.0.2
+	github.com/zenith-hosting/zen v0.0.3
 )
+
+replace github.com/zenith-hosting/zen => ../..
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
