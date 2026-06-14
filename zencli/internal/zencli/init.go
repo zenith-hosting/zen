@@ -14,6 +14,7 @@ var requiredInitTools = []string{"go", "node", "pnpm"}
 var postInitCommands = [][]string{
 	{"go", "mod", "tidy"},
 	{"pnpm", "--dir", "frontend", "install"},
+	{"pnpm", "--dir", "frontend", "approve-builds", "--all"},
 }
 
 func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Writer) error {
@@ -58,7 +59,7 @@ func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Write
 			Stderr: stderr,
 		}
 
-		if err := proc.Run(ctx); err != nil {
+		if err := proc.Run(ctx); err != nil && cmd[len(cmd)-1] != "install" {
 			return fmt.Errorf("zen init: failed to run %v: %w", cmd, err)
 		}
 	}

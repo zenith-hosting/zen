@@ -75,6 +75,14 @@ func airCommand(cfg Config) ProcessCommand {
 	return cmd
 }
 
+func tailwindWatchCommand(cfg Config) ProcessCommand {
+	return ProcessCommand{
+		Name: "pnpm",
+		Args: []string{"tailwind:watch"},
+		Dir:  cfg.FrontendDir,
+	}
+}
+
 func goProdCommand(cfg Config) ProcessCommand {
 	cmd := shellCommand(cfg.BinaryPath)
 	cmd.Env = []string{"ZEN_ENV=prod"}

@@ -3,12 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css",
+    "tailwind:watch": "tailwindcss -i ./src/globals.css -o ./src/app.css --watch=always",
     "build:client": "vite build --outDir dist/client --manifest",
     "build:server": "vite build --ssr .zen/entries/entry-server.tsx --outDir dist/server",
-    "build": "pnpm build:client && pnpm build:server"
+    "build": "pnpm tailwind:build && pnpm build:client && pnpm build:server"
   },
   "dependencies": {
     "@preact/preset-vite": "^2.10.5",
+    "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "preact": "^10.29.2",
     "preact-render-to-string": "^6.7.0",

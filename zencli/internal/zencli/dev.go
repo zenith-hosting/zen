@@ -17,6 +17,10 @@ type NamedProcessCommand struct {
 func devPlan(cfg Config) []NamedProcessCommand {
 	return []NamedProcessCommand{
 		{
+			Name:    "tailwind",
+			Command: tailwindWatchCommand(cfg),
+		},
+		{
 			Name:    "renderer",
 			Command: devRendererCommand(cfg),
 		},

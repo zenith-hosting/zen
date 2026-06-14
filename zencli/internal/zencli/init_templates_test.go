@@ -21,6 +21,7 @@ func TestStarterFilesIncludeRunnableProject(t *testing.T) {
 		"frontend/vite.config.ts",
 		"frontend/index.html",
 		"frontend/src/app.css",
+		"frontend/src/globals.css",
 		"frontend/src/islands/Counter.tsx",
 		"frontend/src/pages/App.tsx",
 		"frontend/src/pages/Home.tsx",
@@ -193,6 +194,41 @@ func TestStarterUsesAppOwnedClientRouter(t *testing.T) {
 		if !strings.Contains(app, want) {
 			t.Fatalf("frontend/src/pages/App.tsx missing %q\n%s", want, app)
 		}
+	}
+}
+
+func TestStarterFrontendUsesTailwindCLI(t *testing.T) {
+	files := starterFiles()
+	pkg := files["frontend/package.json"]
+	globals := files["frontend/src/globals.css"]
+	appCSS := files["frontend/src/app.css"]
+	client := files["frontend/.zen/entries/entry-client.tsx"]
+
+	for _, want := range []string{
+		`"tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css"`,
+		`"tailwind:watch": "tailwindcss -i ./src/globals.css -o ./src/app.css --watch=always"`,
+		`"build": "pnpm tailwind:build && pnpm build:client && pnpm build:server"`,
+		`"@tailwindcss/cli": "^4.3.0"`,
+	} {
+		if !strings.Contains(pkg, want) {
+			t.Fatalf("frontend/package.json missing %q\n%s", want, pkg)
+		}
+	}
+
+	if !strings.Contains(globals, `@import "tailwindcss";`) {
+		t.Fatalf("frontend/src/globals.css should be the Tailwind CLI input\n%s", globals)
+	}
+
+	if strings.Contains(appCSS, `@import "tailwindcss";`) {
+		t.Fatalf("frontend/src/app.css should be generated output, not the Tailwind CLI input\n%s", appCSS)
+	}
+
+	if !strings.Contains(appCSS, `tailwindcss v4`) {
+		t.Fatalf("frontend/src/app.css should contain generated Tailwind CSS\n%s", appCSS)
+	}
+
+	if !strings.Contains(client, `../../src/app.css`) {
+		t.Fatalf("entry-client.tsx should import generated app.css\n%s", client)
 	}
 }
 
