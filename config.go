@@ -15,7 +15,7 @@ type Config struct {
 
 	RenderTimeout time.Duration
 
-	ProjectRoot string
+	ProjectRoot  string
 	DocumentPath string
 
 	AppElementID  string
@@ -97,6 +97,9 @@ func (c Config) withDefaults() Config {
 		}
 		if c.renderURL == "" {
 			c.renderURL = strings.TrimRight(c.viteURL, "/") + "/__zen/render"
+		}
+		if c.clientDist == "" {
+			c.clientDist = filepath.Join(frontendDir, "public", "assets")
 		}
 	} else {
 		if c.renderURL == "" {
