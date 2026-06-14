@@ -99,7 +99,7 @@ func (c Config) withDefaults() Config {
 			c.renderURL = strings.TrimRight(c.viteURL, "/") + "/__zen/render"
 		}
 		if c.clientDist == "" {
-			c.clientDist = filepath.Join(frontendDir, "public", "assets")
+			c.clientDist = filepath.Join(frontendDir, "public")
 		}
 	} else {
 		if c.renderURL == "" {
