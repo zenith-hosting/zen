@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/zenith-hosting/zen v0.0.4
+	github.com/zenith-hosting/zen v0.0.5
 )
 
 replace github.com/zenith-hosting/zen => ../..
