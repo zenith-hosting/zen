@@ -18,8 +18,8 @@ func TestLoadConfigAppliesDefaults(t *testing.T) {
 		t.Fatalf("expected zen config version 1, got %d", cfg.ZenConfigVersion)
 	}
 
-	if cfg.AppCommand != "go run ." {
-		t.Fatalf("expected default app command, got %q", cfg.AppCommand)
+	if cfg.MainPath != "." {
+		t.Fatalf("expected default main path, got %q", cfg.MainPath)
 	}
 
 	if cfg.AirCommand != "go tool air" {
@@ -43,7 +43,7 @@ func TestLoadConfigReadsZenConfigJSON(t *testing.T) {
 	dir := t.TempDir()
 
 	raw := `{
-		"appCommand": "go run ./cmd/app",
+		"mainPath": ".",
 		"airCommand": "go tool air -c .air.toml",
 		"frontendDir": "web",
 		"devRendererPort": 5273,
@@ -60,8 +60,8 @@ func TestLoadConfigReadsZenConfigJSON(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.AppCommand != "go run ./cmd/app" {
-		t.Fatalf("expected configured app command, got %q", cfg.AppCommand)
+	if cfg.MainPath != "." {
+		t.Fatalf("expected configured main path, got %q", cfg.MainPath)
 	}
 
 	if cfg.FrontendDir != "web" {

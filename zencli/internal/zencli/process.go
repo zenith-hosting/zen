@@ -131,5 +131,5 @@ func frontendBuildCommand(cfg Config) ProcessCommand {
 }
 
 func goBuildCommand(cfg Config) ProcessCommand {
-	return shellCommand("go build -o " + cfg.BinaryPath + " .")
+	return shellCommand("go build -o " + cfg.BinaryPath + " " + cfg.MainPath)
 }

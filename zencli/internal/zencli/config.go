@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	ZenConfigVersion int    `json:"zenConfigVersion"`
-	AppCommand       string `json:"appCommand"`
+	MainPath         string `json:"mainPath"`
 	AirCommand       string `json:"airCommand"`
 	FrontendDir      string `json:"frontendDir"`
 	DevRendererPort  int    `json:"devRendererPort"`
@@ -19,7 +19,7 @@ type Config struct {
 func defaultConfig() Config {
 	return Config{
 		ZenConfigVersion: 1,
-		AppCommand:       "go run .",
+		MainPath:         ".",
 		AirCommand:       "go tool air",
 		FrontendDir:      "frontend",
 		DevRendererPort:  5173,
@@ -47,8 +47,8 @@ func loadConfig(root string) (Config, error) {
 	if cfg.ZenConfigVersion == 0 {
 		cfg.ZenConfigVersion = 1
 	}
-	if cfg.AppCommand == "" {
-		cfg.AppCommand = "go run ."
+	if cfg.MainPath == "" {
+		cfg.MainPath = ".."
 	}
 	if cfg.AirCommand == "" {
 		cfg.AirCommand = "go tool air"

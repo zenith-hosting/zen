@@ -1,5 +1,5 @@
 {
-  "appCommand": "go run .",
+  "mainPath": ".",
   "airCommand": "go tool air -c .air.toml",
   "frontendDir": "frontend",
   "devRendererPort": 5173,
