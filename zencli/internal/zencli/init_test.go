@@ -71,6 +71,49 @@ func TestRunInitRefusesToOverwriteExistingFile(t *testing.T) {
 	}
 }
 
+func TestRunInitRunsPostInitSetupInExistingZenProject(t *testing.T) {
+	dir := t.TempDir()
+	logPath := withFakeInitTools(t)
+	customMain := []byte("package main\n\nfunc main() {}\n")
+
+	writeStarterProject(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), customMain, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err := runInit(t.Context(), dir, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	raw, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("expected post-init commands to run: %v", err)
+	}
+
+	want := strings.Join([]string{
+		"go mod tidy",
+		"pnpm --dir frontend install",
+		"pnpm --dir frontend approve-builds --all",
+		"",
+	}, "\n")
+
+	if string(raw) != want {
+		t.Fatalf("unexpected post-init commands:\nwant:\n%s\ngot:\n%s", want, string(raw))
+	}
+
+	raw, err = os.ReadFile(filepath.Join(dir, "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != string(customMain) {
+		t.Fatal("expected existing project files to be left unchanged")
+	}
+}
+
 func TestRunInitRunsPostInitSetup(t *testing.T) {
 	dir := t.TempDir()
 	logPath := withFakeInitTools(t)
@@ -97,6 +140,20 @@ func TestRunInitRunsPostInitSetup(t *testing.T) {
 
 	if string(raw) != want {
 		t.Fatalf("unexpected post-init commands:\nwant:\n%s\ngot:\n%s", want, string(raw))
+	}
+}
+
+func writeStarterProject(t *testing.T, dir string) {
+	t.Helper()
+
+	for path, contents := range starterFiles() {
+		fullPath := filepath.Join(dir, path)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(contents), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

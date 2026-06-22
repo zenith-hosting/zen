@@ -24,6 +24,50 @@ func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Write
 		}
 	}
 
+	existingProject, err := isExistingZenProject(root)
+	if err != nil {
+		return err
+	}
+
+	if !existingProject {
+		if err := writeStarterFiles(root); err != nil {
+			return err
+		}
+	}
+
+	for _, cmd := range postInitCommands {
+		proc := ManagedProcess{
+			Name: cmd[0],
+			Command: ProcessCommand{
+				Name: cmd[0],
+				Args: cmd[1:],
+				Dir:  root,
+			},
+			Stdout: stdout,
+			Stderr: stderr,
+		}
+
+		if err := proc.Run(ctx); err != nil && cmd[len(cmd)-1] != "install" {
+			return fmt.Errorf("zen init: failed to run %v: %w", cmd, err)
+		}
+	}
+
+	return nil
+}
+
+func isExistingZenProject(root string) (bool, error) {
+	_, err := os.Stat(filepath.Join(root, "zen.config.json"))
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+func writeStarterFiles(root string) error {
 	for path := range starterFiles() {
 		fullPath := filepath.Join(root, path)
 
@@ -44,23 +88,6 @@ func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Write
 
 		if err := os.WriteFile(fullPath, []byte(contents), 0o644); err != nil {
 			return err
-		}
-	}
-
-	for _, cmd := range postInitCommands {
-		proc := ManagedProcess{
-			Name: cmd[0],
-			Command: ProcessCommand{
-				Name: cmd[0],
-				Args: cmd[1:],
-				Dir:  root,
-			},
-			Stdout: stdout,
-			Stderr: stderr,
-		}
-
-		if err := proc.Run(ctx); err != nil && cmd[len(cmd)-1] != "install" {
-			return fmt.Errorf("zen init: failed to run %v: %w", cmd, err)
 		}
 	}
 
