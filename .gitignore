@@ -1,8 +1,10 @@
+.codegraph/
 .worktrees/
+bin/
 node_modules/
 dist/
-bin/
-tmp/
 examples/basic/basic
 examples/todo/todo
+tmp/
 main
+zen

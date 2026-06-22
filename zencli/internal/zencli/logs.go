@@ -2,8 +2,10 @@ package zencli
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 )
 
 func prefixLines(input io.Reader, output io.Writer, prefix string) error {
@@ -15,5 +17,10 @@ func prefixLines(input io.Reader, output io.Writer, prefix string) error {
 		}
 	}
 
-	return scanner.Err()
+	err := scanner.Err()
+	if errors.Is(err, os.ErrClosed) {
+		return nil
+	}
+
+	return err
 }

@@ -26,6 +26,7 @@ func (p ManagedProcess) Run(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, p.Command.Name, p.Command.Args...)
 	cmd.Dir = p.Command.Dir
 	cmd.Env = append(os.Environ(), p.Command.Env...)
+	configureManagedCommand(cmd)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -52,14 +53,101 @@ func (p ManagedProcess) Run(ctx context.Context) error {
 	}()
 
 	waitErr := cmd.Wait()
+	terminateErr := terminateManagedProcess(cmd)
 
+	var pipeErr error
 	for range 2 {
 		if err := <-done; err != nil {
-			return err
+			pipeErr = err
 		}
 	}
 
+	if pipeErr != nil {
+		return pipeErr
+	}
+
+	if waitErr != nil {
+		return waitErr
+	}
+
+	if terminateErr != nil {
+		return terminateErr
+	}
+
 	return waitErr
+}
+
+func runManagedProcesses(ctx context.Context, plan []NamedProcessCommand, stdout, stderr io.Writer, afterStart func(context.Context) error) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errs := make(chan error, len(plan))
+
+	for _, item := range plan {
+		proc := ManagedProcess{
+			Name:    item.Name,
+			Command: item.Command,
+			Stdout:  stdout,
+			Stderr:  stderr,
+		}
+
+		go func(proc ManagedProcess) {
+			errs <- proc.Run(ctx)
+		}(proc)
+	}
+
+	var afterStartErrs chan error
+	if afterStart != nil {
+		afterStartErrs = make(chan error, 1)
+		go func() {
+			afterStartErrs <- afterStart(ctx)
+		}()
+
+		select {
+		case err := <-afterStartErrs:
+			if err != nil {
+				cancel()
+				drainManagedProcessResults(errs, len(plan))
+				return err
+			}
+
+			afterStartErrs = nil
+		case firstErr := <-errs:
+			cancel()
+			waitForAfterStart(afterStartErrs)
+			drainManagedProcessResults(errs, len(plan)-1)
+			return firstErr
+		}
+	}
+
+	if len(plan) == 0 {
+		return nil
+	}
+
+	firstErr := <-errs
+	cancel()
+	waitForAfterStart(afterStartErrs)
+	drainManagedProcessResults(errs, len(plan)-1)
+
+	if firstErr != nil {
+		return firstErr
+	}
+
+	return nil
+}
+
+func drainManagedProcessResults(errs <-chan error, count int) {
+	for range count {
+		<-errs
+	}
+}
+
+func waitForAfterStart(afterStartErrs <-chan error) {
+	if afterStartErrs == nil {
+		return
+	}
+
+	<-afterStartErrs
 }
 
 func shellCommand(command string) ProcessCommand {
