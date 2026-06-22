@@ -328,7 +328,12 @@ Required template slots:
 ```html
 <!--zen:title-->
 <!--zen:head-->
+<!--zen:base-->
+<!--zen:meta-->
+<!--zen:link-->
+<!--zen:style-->
 <!--zen:styles-->
+<!--zen:script-->
 <!--zen:app-->
 <!--zen:data-->
 <!--zen:scripts-->
@@ -338,10 +343,30 @@ Slot meanings:
 
 * `<!--zen:title-->`: escaped page title from `WithTitle` or `Config.DefaultTitle`
 * `<!--zen:head-->`: raw `head` returned by the Node renderer
+* `<!--zen:base-->`: Go-generated `<base>` tags from `WithBase` / `Base`
+* `<!--zen:meta-->`: Go-generated `<meta>` tags from `WithMeta` / `Meta`
+* `<!--zen:link-->`: Go-generated `<link>` tags from `WithLink` / `Link`
+* `<!--zen:style-->`: Go-generated `<style>` tag from `WithStyle` / `Style`
 * `<!--zen:styles-->`: production CSS links from the Vite manifest
+* `<!--zen:script-->`: Go-generated `<script>` tags from `WithScript` / `Script`
 * `<!--zen:app-->`: raw Preact SSR HTML
 * `<!--zen:data-->`: Go-generated safe hydration JSON script using `Config.DataElementID`
 * `<!--zen:scripts-->`: Vite dev scripts or production client entry scripts
+
+Go-owned head elements should use the structured render options:
+
+```go
+renderer.RenderPage(c, "Home", props,
+	zen.WithTitle("Home"),
+	zen.WithBase(zen.Href("/")),
+	zen.WithMeta(zen.Name("description"), zen.Content("Page description")),
+	zen.WithLink(zen.Rel("canonical"), zen.Href("https://example.com/")),
+	zen.WithStyle(`body { color: red; }`),
+	zen.WithScript(zen.Type("application/ld+json"), zen.Text(`{"name":"Home"}`)),
+)
+```
+
+Attribute values are escaped by Zen. Use `Attr(name, value)` for less-common attributes; unsafe attribute names are skipped. `Text` is raw element text for scripts, and `WithStyle` takes raw CSS directly as a string.
 
 The starter and examples should keep this shape:
 
@@ -367,6 +392,7 @@ When changing document template behavior, update:
 ```text
 document.go
 document_test.go
+head.go
 render.go
 render_test.go
 zencli/internal/zencli/init_template/frontend/index.html
