@@ -21,6 +21,11 @@ type RenderOption func(*renderOptions)
 type renderOptions struct {
 	Title  string
 	Status int
+	Base   []headElement
+	Meta   []headElement
+	Link   []headElement
+	Script []headElement
+	Style  string
 }
 
 func WithTitle(title string) RenderOption {
@@ -114,6 +119,11 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 	doc, err := renderDocumentTemplate(template, documentInput{
 		Title:         opts.Title,
 		Head:          res.Head,
+		Base:          opts.Base,
+		Meta:          opts.Meta,
+		Link:          opts.Link,
+		Script:        opts.Script,
+		Style:         opts.Style,
 		DataElementID: r.config.DataElementID,
 		HTML:          res.HTML,
 		HydrationJSON: hydrationJSON,

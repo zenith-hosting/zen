@@ -132,7 +132,12 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 <head>
 <title><!--zen:title--></title>
 <!--zen:head-->
+<!--zen:base-->
+<!--zen:meta-->
+<!--zen:link-->
+<!--zen:style-->
 <!--zen:styles-->
+<!--zen:script-->
 </head>
 <body class="custom-shell">
 <div id="app"><!--zen:app--></div>
@@ -165,7 +170,14 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 
 	app := fiber.New()
 	app.Get("/", func(c fiber.Ctx) error {
-		return r.RenderPage(c, "Home", map[string]string{"title": "Hello"}, WithTitle("Custom <Title>"))
+		return r.RenderPage(c, "Home", map[string]string{"title": "Hello"},
+			WithTitle("Custom <Title>"),
+			Base(Href("/")),
+			WithMeta(Name("description"), Content("From Go <unsafe>")),
+			WithLink(Rel("canonical"), Href("https://example.com/?q=<unsafe>"), Attr("data-source", "go <unsafe>")),
+			WithStyle(`body { color: red; }`),
+			WithScript(Type("application/ld+json"), Text(`{"name":"Home"}`)),
+		)
 	})
 
 	res := testutil.PerformRequest(t, app, "GET", "/", "")
@@ -175,6 +187,11 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 		`<body class="custom-shell">`,
 		`<title>Custom &lt;Title&gt;</title>`,
 		`<meta name="description" content="From renderer">`,
+		`<base href="/">`,
+		`<meta name="description" content="From Go &lt;unsafe&gt;">`,
+		`<link rel="canonical" href="https://example.com/?q=&lt;unsafe&gt;" data-source="go &lt;unsafe&gt;">`,
+		`<style>body { color: red; }</style>`,
+		`<script type="application/ld+json">{"name":"Home"}</script>`,
 		`<div id="app"><main><h1>Hello</h1></main></div>`,
 		`http://localhost:5173/@vite/client`,
 		`http://localhost:5173/.zen/entries/entry-client.tsx`,

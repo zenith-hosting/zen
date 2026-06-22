@@ -11,7 +11,12 @@ func TestRenderDocumentTemplateInjectsSlots(t *testing.T) {
 <head>
 <title><!--zen:title--></title>
 <!--zen:head-->
+<!--zen:base-->
+<!--zen:meta-->
+<!--zen:link-->
+<!--zen:style-->
 <!--zen:styles-->
+<!--zen:script-->
 </head>
 <body class="font-sans">
 <div id="app"><!--zen:app--></div>
@@ -23,6 +28,11 @@ func TestRenderDocumentTemplateInjectsSlots(t *testing.T) {
 	doc, err := renderDocumentTemplate(template, documentInput{
 		Title:         "Home <unsafe>",
 		Head:          `<meta name="description" content="Hello">`,
+		Base:          []headElement{newHeadElement("base", Href("/"))},
+		Meta:          []headElement{newHeadElement("meta", Property("og:title"), Content("Home <unsafe>"))},
+		Link:          []headElement{newHeadElement("link", Rel("canonical"), Href("https://example.com/?q=<unsafe>"))},
+		Style:         `body { color: red; }`,
+		Script:        []headElement{newHeadElement("script", Type("application/ld+json"), Text(`{"name":"Home"}`))},
 		DataElementID: "__ZEN_DATA__",
 		HTML:          `<main><h1>Hello</h1></main>`,
 		HydrationJSON: `{"page":"Home","props":{"title":"Hello"}}`,
@@ -37,6 +47,11 @@ func TestRenderDocumentTemplateInjectsSlots(t *testing.T) {
 	for _, want := range []string{
 		`<title>Home &lt;unsafe&gt;</title>`,
 		`<meta name="description" content="Hello">`,
+		`<base href="/">`,
+		`<meta property="og:title" content="Home &lt;unsafe&gt;">`,
+		`<link rel="canonical" href="https://example.com/?q=&lt;unsafe&gt;">`,
+		`<style>body { color: red; }</style>`,
+		`<script type="application/ld+json">{"name":"Home"}</script>`,
 		`<link rel="stylesheet" href="/assets/app.css">`,
 		`<div id="app"><main><h1>Hello</h1></main></div>`,
 		`<script id="__ZEN_DATA__" type="application/json">{"page":"Home","props":{"title":"Hello"}}</script>`,
@@ -65,6 +80,23 @@ func TestRenderDocumentTemplateRequiresSlots(t *testing.T) {
 
 	if !strings.Contains(err.Error(), `missing required document slot <!--zen:title-->`) {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHeadElementTagsEscapesAttributesAndSkipsUnsafeNames(t *testing.T) {
+	html := headElementTags([]headElement{
+		newHeadElement("meta",
+			Attr("data-value", `A "quoted" <value>`),
+			Attr(`bad name="x`, "ignored"),
+		),
+	})
+
+	want := `<meta data-value="A &#34;quoted&#34; &lt;value&gt;">`
+	if strings.TrimSpace(html) != want {
+		t.Fatalf("expected %q, got %q", want, strings.TrimSpace(html))
+	}
+	if strings.Contains(html, "bad name") {
+		t.Fatalf("unsafe attribute name should be skipped: %s", html)
 	}
 }
 

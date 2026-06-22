@@ -47,7 +47,12 @@ func TestStarterIndexHTMLContainsZenDocumentSlots(t *testing.T) {
 	for _, want := range []string{
 		`<!--zen:title-->`,
 		`<!--zen:head-->`,
+		`<!--zen:base-->`,
+		`<!--zen:meta-->`,
+		`<!--zen:link-->`,
+		`<!--zen:style-->`,
 		`<!--zen:styles-->`,
+		`<!--zen:script-->`,
 		`<div id="app"><!--zen:app--></div>`,
 		`<!--zen:data-->`,
 		`<!--zen:scripts-->`,

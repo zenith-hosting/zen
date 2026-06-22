@@ -63,7 +63,11 @@ func main() {
 	app.Get("/", func(c fiber.Ctx) error {
 		return renderer.RenderPage(c, "Home", map[string]any{
 			"title": "Zen App",
-		}, zen.WithTitle("Home"))
+		},
+			zen.WithTitle("Home"),
+			zen.WithMeta(zen.Name("description"), zen.Content("Zen app home page")),
+			zen.WithLink(zen.Rel("canonical"), zen.Href("https://example.com/")),
+		)
 	})
 
 	log.Fatal(app.Listen(":3000"))
@@ -78,6 +82,20 @@ GET  /__zen/health
 ```
 
 If the app does not run from the project root, set `ProjectRoot` in `zen.Config` so Zen can find `zen.config.json`.
+
+Custom head elements are built from escaped attributes and injected into the matching slots in `frontend/index.html`:
+
+```go
+renderer.RenderPage(c, "Home", props,
+	zen.WithBase(zen.Href("/")),
+	zen.WithMeta(zen.Name("description"), zen.Content("Page description")),
+	zen.WithLink(zen.Rel("canonical"), zen.Href("https://example.com/"), zen.Attr("data-source", "go")),
+	zen.WithStyle(`body { color: red; }`),
+	zen.WithScript(zen.Type("application/ld+json"), zen.Text(`{"name":"Home"}`)),
+)
+```
+
+Short aliases such as `zen.Base(...)`, `zen.Meta(...)`, and `zen.Link(...)` are also available.
 
 ## CLI Workflow
 
