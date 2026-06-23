@@ -7,7 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
+
+const starterFrontendDir = "frontend"
+
+const zenRuntimeSubdir = ".zen"
+
+const zenRuntimeDir = starterFrontendDir + "/" + zenRuntimeSubdir
 
 var requiredInitTools = []string{"go", "node", "pnpm"}
 
@@ -17,7 +24,7 @@ var postInitCommands = [][]string{
 	{"pnpm", "--dir", "frontend", "approve-builds", "--all"},
 }
 
-func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Writer) error {
+func runInit(ctx context.Context, root string, cfg Config, stdout io.Writer, stderr io.Writer) error {
 	for _, tool := range requiredInitTools {
 		if _, err := exec.LookPath(tool); err != nil {
 			return fmt.Errorf("zen init: required tool %q was not found in PATH", tool)
@@ -29,7 +36,11 @@ func runInit(ctx context.Context, root string, stdout io.Writer, stderr io.Write
 		return err
 	}
 
-	if !existingProject {
+	if existingProject {
+		if err := writeZenRuntimeFiles(root, cfg.FrontendDir); err != nil {
+			return err
+		}
+	} else {
 		if err := writeStarterFiles(root); err != nil {
 			return err
 		}
@@ -69,6 +80,10 @@ func isExistingZenProject(root string) (bool, error) {
 
 func writeStarterFiles(root string) error {
 	for path := range starterFiles() {
+		if isZenRuntimePath(path) {
+			continue
+		}
+
 		fullPath := filepath.Join(root, path)
 
 		if _, err := os.Stat(fullPath); err == nil {
@@ -78,7 +93,15 @@ func writeStarterFiles(root string) error {
 		}
 	}
 
+	if err := writeZenRuntimeFiles(root, starterFrontendDir); err != nil {
+		return err
+	}
+
 	for path, contents := range starterFiles() {
+		if isZenRuntimePath(path) {
+			continue
+		}
+
 		fullPath := filepath.Join(root, path)
 		dir := filepath.Dir(fullPath)
 
@@ -92,4 +115,42 @@ func writeStarterFiles(root string) error {
 	}
 
 	return nil
+}
+
+func writeZenRuntimeFiles(root, frontendDir string) error {
+	if frontendDir == "" {
+		frontendDir = starterFrontendDir
+	}
+
+	runtimeRoot := filepath.Join(root, frontendDir, zenRuntimeSubdir)
+	if err := os.RemoveAll(runtimeRoot); err != nil {
+		return err
+	}
+
+	for path, contents := range starterFiles() {
+		if !isZenRuntimePath(path) {
+			continue
+		}
+
+		fullPath := filepath.Join(root, zenRuntimeTargetPath(path, frontendDir))
+
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(fullPath, []byte(contents), 0o644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func isZenRuntimePath(relPath string) bool {
+	return relPath == zenRuntimeDir || strings.HasPrefix(relPath, zenRuntimeDir+"/")
+}
+
+func zenRuntimeTargetPath(relPath, frontendDir string) string {
+	rest := strings.TrimPrefix(relPath, starterFrontendDir+"/")
+	return filepath.Join(frontendDir, filepath.FromSlash(rest))
 }

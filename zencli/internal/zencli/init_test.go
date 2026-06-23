@@ -15,7 +15,7 @@ func TestRunInitWritesCompleteStarterProject(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := runInit(t.Context(), dir, &stdout, &stderr)
+	err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestRunInitCreatesNestedDirectories(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := runInit(t.Context(), dir, &stdout, &stderr)
+	err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestRunInitRefusesToOverwriteExistingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := runInit(t.Context(), dir, &stdout, &stderr)
+	err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected overwrite protection error")
 	}
@@ -84,7 +84,7 @@ func TestRunInitRunsPostInitSetupInExistingZenProject(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := runInit(t.Context(), dir, &stdout, &stderr)
+	err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -114,6 +114,117 @@ func TestRunInitRunsPostInitSetupInExistingZenProject(t *testing.T) {
 	}
 }
 
+func TestRunInitReplacesZenRuntimeInExistingProject(t *testing.T) {
+	dir := t.TempDir()
+	withFakeInitTools(t)
+
+	writeStarterProject(t, dir)
+
+	// A developer-owned file should be left untouched.
+	customMain := []byte("package main\n\nfunc main() {}\n")
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), customMain, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// A stale Zen-managed file and a tampered runtime file should be replaced.
+	stale := filepath.Join(dir, "frontend", ".zen", "renderers", "stale.mjs")
+	if err := os.WriteFile(stale, []byte("// stale\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	renderer := filepath.Join(dir, "frontend", ".zen", "renderers", "dev-renderer.mjs")
+	if err := os.WriteFile(renderer, []byte("// tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("expected stale runtime file to be removed, got err=%v", err)
+	}
+
+	raw, err := os.ReadFile(renderer)
+	if err != nil {
+		t.Fatalf("expected renderer to be rewritten: %v", err)
+	}
+	if string(raw) != starterFiles()["frontend/.zen/renderers/dev-renderer.mjs"] {
+		t.Fatal("expected runtime file to be replaced with starter contents")
+	}
+
+	raw, err = os.ReadFile(filepath.Join(dir, "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != string(customMain) {
+		t.Fatal("expected developer-owned files to be left unchanged")
+	}
+}
+
+func TestRunInitRefreshesRuntimeUnderConfiguredFrontendDir(t *testing.T) {
+	dir := t.TempDir()
+	withFakeInitTools(t)
+
+	// Mark this as an existing project with a non-default frontend dir.
+	if err := os.WriteFile(filepath.Join(dir, "zen.config.json"), []byte(`{"frontendDir":"web"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := defaultConfig()
+	cfg.FrontendDir = "web"
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if err := runInit(t.Context(), dir, cfg, &stdout, &stderr); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(dir, "web", ".zen", "renderers", "dev-renderer.mjs"))
+	if err != nil {
+		t.Fatalf("expected runtime under configured frontendDir: %v", err)
+	}
+	if string(raw) != starterFiles()["frontend/.zen/renderers/dev-renderer.mjs"] {
+		t.Fatal("expected runtime file to match starter contents")
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "frontend", ".zen")); !os.IsNotExist(err) {
+		t.Fatalf("expected no runtime under default frontend dir, got err=%v", err)
+	}
+}
+
+func TestRunInitReplacesExistingZenRuntimeInNewProject(t *testing.T) {
+	dir := t.TempDir()
+	withFakeInitTools(t)
+
+	// A pre-existing .zen file should not trigger overwrite protection.
+	renderer := filepath.Join(dir, "frontend", ".zen", "renderers", "dev-renderer.mjs")
+	if err := os.MkdirAll(filepath.Dir(renderer), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(renderer, []byte("// tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	raw, err := os.ReadFile(renderer)
+	if err != nil {
+		t.Fatalf("expected renderer to be written: %v", err)
+	}
+	if string(raw) != starterFiles()["frontend/.zen/renderers/dev-renderer.mjs"] {
+		t.Fatal("expected pre-existing runtime file to be replaced")
+	}
+}
+
 func TestRunInitRunsPostInitSetup(t *testing.T) {
 	dir := t.TempDir()
 	logPath := withFakeInitTools(t)
@@ -121,7 +232,7 @@ func TestRunInitRunsPostInitSetup(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err := runInit(t.Context(), dir, &stdout, &stderr)
+	err := runInit(t.Context(), dir, defaultConfig(), &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

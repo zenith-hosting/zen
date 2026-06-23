@@ -210,7 +210,7 @@ func TestStarterFrontendUsesTailwindCLI(t *testing.T) {
 	client := files["frontend/.zen/entries/entry-client.tsx"]
 
 	for _, want := range []string{
-		`"tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css"`,
+		`"tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css --minify"`,
 		`"tailwind:watch": "tailwindcss -i ./src/globals.css -o ./src/app.css --watch=always"`,
 		`"build": "pnpm tailwind:build && pnpm build:client && pnpm build:server"`,
 		`"@tailwindcss/cli": "^4.3.0"`,

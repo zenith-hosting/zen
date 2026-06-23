@@ -38,7 +38,7 @@ func run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 
 	switch args[0] {
 	case "init":
-		return runInit(ctx, root, stdout, stderr)
+		return runInit(ctx, root, cfg, stdout, stderr)
 
 	case "dev":
 		return runDev(ctx, cfg, stdout, stderr)

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css",
+    "tailwind:build": "tailwindcss -i ./src/globals.css -o ./src/app.css --minify",
     "tailwind:watch": "tailwindcss -i ./src/globals.css -o ./src/app.css --watch=always",
     "build:client": "vite build --outDir dist/client --manifest",
     "build:server": "vite build --ssr .zen/entries/entry-server.tsx --outDir dist/server",

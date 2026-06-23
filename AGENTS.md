@@ -496,7 +496,9 @@ pnpm --dir frontend install
 pnpm --dir frontend approve-builds --all
 ```
 
-`zen init` should refuse to overwrite existing files.
+`zen init` should refuse to overwrite existing developer-owned files.
+
+The one exception is the Zen-managed runtime directory `{frontendDir}/.zen` (renderer and entry files). `zen init` always replaces it wholesale, removing any existing copy first, so an existing project checked out on a new machine gets runtime files matching the installed CLI. For existing projects the directory is resolved against the `frontendDir` from `zen.config.json` (defaulting to `frontend`); new projects always use the starter `frontend/.zen`.
 
 ### `zen dev`
 
