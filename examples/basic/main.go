@@ -16,6 +16,11 @@ func main() {
 
 	dev := os.Getenv("ZEN_ENV") != "prod"
 
+	port := ":3000"
+	if dev {
+		port = ":30001"
+	}
+
 	cfg := zen.Config{
 		Dev:           dev,
 		DefaultTitle:  "Zen Basic Example",
@@ -62,7 +67,7 @@ func main() {
 		return c.Redirect().To("/")
 	})
 
-	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
+	log.Fatal(app.Listen(port, fiber.ListenConfig{
 		DisableStartupMessage: true,
 	}))
 }

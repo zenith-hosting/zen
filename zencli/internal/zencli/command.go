@@ -4,11 +4,25 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 )
 
 const ZenConfigVersion = 1
 
 func Run(args []string, stdout io.Writer, stderr io.Writer) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	err := run(ctx, args, stdout, stderr)
+	if ctx.Err() != nil {
+		return nil
+	}
+
+	return err
+}
+
+func run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	if len(args) == 0 {
 		printUsage(stdout)
 		return nil
@@ -24,16 +38,16 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) error {
 
 	switch args[0] {
 	case "init":
-		return runInit(context.Background(), root, stdout, stderr)
+		return runInit(ctx, root, stdout, stderr)
 
 	case "dev":
-		return runDev(context.Background(), cfg, stdout, stderr)
+		return runDev(ctx, cfg, stdout, stderr)
 
 	case "build":
-		return runBuild(context.Background(), cfg, stdout, stderr)
+		return runBuild(ctx, cfg, stdout, stderr)
 
 	case "start":
-		return runStart(context.Background(), cfg, stdout, stderr)
+		return runStart(ctx, cfg, stdout, stderr)
 
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
@@ -41,8 +55,8 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) error {
 }
 
 func printUsage(stdout io.Writer) {
-	_, _ = fmt.Fprintln(stdout, "zen init")
-	_, _ = fmt.Fprintln(stdout, "zen dev")
-	_, _ = fmt.Fprintln(stdout, "zen build")
-	_, _ = fmt.Fprintln(stdout, "zen start")
+	fmt.Fprintln(stdout, "zen init")
+	fmt.Fprintln(stdout, "zen dev")
+	fmt.Fprintln(stdout, "zen build")
+	fmt.Fprintln(stdout, "zen start")
 }

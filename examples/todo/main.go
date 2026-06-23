@@ -68,6 +68,11 @@ func main() {
 
 	dev := os.Getenv("ZEN_ENV") != "prod"
 
+	port := ":3000"
+	if dev {
+		port = ":30001"
+	}
+
 	cfg := zen.Config{
 		Dev:           dev,
 		DefaultTitle:  "Zen Todo Example",
@@ -100,7 +105,7 @@ func main() {
 
 	registerTodoRoutes(app, store)
 
-	log.Fatal(app.Listen(":3000", fiber.ListenConfig{
+	log.Fatal(app.Listen(port, fiber.ListenConfig{
 		DisableStartupMessage: true,
 	}))
 }
