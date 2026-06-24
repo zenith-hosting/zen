@@ -451,3 +451,87 @@ func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
 		t.Fatal("expected non-200 response")
 	}
 }
+
+func TestRenderInlineStylesEmitsStyleTagInsteadOfLink(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	css := `.marquee{display:flex}`
+	if err := os.WriteFile(filepath.Join(dir, "assets", "app.def456.css"), []byte(css), 0o644); err != nil {
+		t.Fatalf("write css: %v", err)
+	}
+
+	client := &fakeSSRClient{
+		res: ssrResponse{HTML: `<main>Public</main>`},
+	}
+
+	r := &Renderer{
+		config: Config{
+			Dev:           false,
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+			clientDist:    dir,
+		},
+		ssr: client,
+		manifest: viteManifest{
+			".zen/entries/entry-client.tsx": {
+				File: "assets/entry-client.abc123.js",
+				CSS:  []string{"assets/app.def456.css"},
+			},
+		},
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Public", map[string]string{}, WithInlineStyles())
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+	body := testutil.ReadBody(t, res)
+
+	if !strings.Contains(body, "<style>"+css+"</style>") {
+		t.Fatalf("body missing inlined css: %s", body)
+	}
+	if strings.Contains(body, `<link rel="stylesheet"`) {
+		t.Fatalf("body should not include a render-blocking stylesheet link: %s", body)
+	}
+	// The JS entry still loads normally.
+	if !strings.Contains(body, `<script type="module" src="/assets/entry-client.abc123.js"></script>`) {
+		t.Fatalf("body missing entry script: %s", body)
+	}
+}
+
+func TestRenderInlineStylesIgnoredInDev(t *testing.T) {
+	client := &fakeSSRClient{
+		res: ssrResponse{HTML: `<main>Public</main>`},
+	}
+
+	r := &Renderer{
+		config: Config{
+			Dev:           true,
+			viteURL:       "http://localhost:5173",
+			AppElementID:  "app",
+			DataElementID: "__ZEN_DATA__",
+			DefaultTitle:  "Zen",
+		},
+		ssr: client,
+	}
+
+	app := fiber.New()
+	app.Get("/", func(c fiber.Ctx) error {
+		return r.Render(c, "Public", map[string]string{}, WithInlineStyles())
+	})
+
+	res := testutil.PerformRequest(t, app, "GET", "/", "")
+	body := testutil.ReadBody(t, res)
+
+	// Dev injects CSS via the Vite client; inlining is a no-op and must not break.
+	if strings.Contains(body, "<style>") && !strings.Contains(body, "@vite/client") {
+		t.Fatalf("dev render should keep vite client injection, got: %s", body)
+	}
+	if !strings.Contains(body, `http://localhost:5173/@vite/client`) {
+		t.Fatalf("dev body missing vite client: %s", body)
+	}
+}

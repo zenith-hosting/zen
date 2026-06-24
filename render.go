@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -19,18 +20,29 @@ type Renderer struct {
 type RenderOption func(*renderOptions)
 
 type renderOptions struct {
-	Title  string
-	Status int
-	Base   []headElement
-	Meta   []headElement
-	Link   []headElement
-	Script []headElement
-	Style  string
+	Title        string
+	Status       int
+	Base         []headElement
+	Meta         []headElement
+	Link         []headElement
+	Script       []headElement
+	Style        string
+	InlineStyles bool
 }
 
 func WithTitle(title string) RenderOption {
 	return func(opts *renderOptions) {
 		opts.Title = title
+	}
+}
+
+// WithInlineStyles emits this render's stylesheet(s) inline in a <style> tag rather
+// than as a render-blocking <link>, collapsing the CSS request out of the critical
+// path. Production only: in dev the CSS is injected by the Vite client, so a dev
+// render ignores this and keeps the normal dev asset injection.
+func WithInlineStyles() RenderOption {
+	return func(opts *renderOptions) {
+		opts.InlineStyles = true
 	}
 }
 
@@ -111,6 +123,18 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 		return err
 	}
 
+	// Inline the compiled CSS into a <style> instead of a <link> when asked (prod
+	// only) — reads the same manifest-resolved files zen would otherwise link, so
+	// there's no extra render-blocking CSS request on the critical path.
+	var inlineCSS string
+	if opts.InlineStyles && !r.config.Dev {
+		inlineCSS, err = r.readStyles(assets.Styles)
+		if err != nil {
+			return err
+		}
+		assets.Styles = nil
+	}
+
 	template, err := r.documentTemplate()
 	if err != nil {
 		return err
@@ -128,6 +152,7 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 		HTML:          res.HTML,
 		HydrationJSON: hydrationJSON,
 		Styles:        assets.Styles,
+		InlineCSS:     inlineCSS,
 		Scripts:       assets.Scripts,
 		DevScripts:    devScripts,
 	})
@@ -226,6 +251,28 @@ func (r *Renderer) clientEntryAssets() (clientAssets, []string, error) {
 	}
 
 	return assets, nil, nil
+}
+
+// readStyles reads the given manifest CSS asset paths (e.g. "/assets/app.<hash>.css")
+// from the production client-dist directory and returns their concatenated contents,
+// for inlining into a <style> tag. The paths are the same href values zen otherwise
+// emits as <link rel="stylesheet">.
+func (r *Renderer) readStyles(styles []string) (string, error) {
+	var b strings.Builder
+
+	for _, href := range styles {
+		rel := strings.TrimPrefix(href, "/")
+		raw, err := os.ReadFile(filepath.Join(r.config.clientDist, rel))
+		if err != nil {
+			return "", fmt.Errorf("zen: read inline stylesheet %s: %w", href, err)
+		}
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		b.Write(raw)
+	}
+
+	return b.String(), nil
 }
 
 func (r *Renderer) Close() error {

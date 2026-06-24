@@ -55,6 +55,7 @@ type documentInput struct {
 	HTML          string
 	HydrationJSON string
 	Styles        []string
+	InlineCSS     string
 	Scripts       []string
 	DevScripts    []string
 }
@@ -98,7 +99,10 @@ func renderDocumentTemplate(template string, input documentInput) (string, error
 		documentSlotMeta:    headElementTags(input.Meta),
 		documentSlotLink:    headElementTags(input.Link),
 		documentSlotStyle:   styleTag(input.Style),
-		documentSlotStyles:  stylesheetTags(input.Styles),
+		// InlineCSS (when set) is the build stylesheet emitted inline instead of as a
+		// <link>; reuse styleTag (empty in returns empty out). Raw, like Style: compiled
+		// CSS never contains "</style>" and escaping would corrupt it.
+		documentSlotStyles: styleTag(input.InlineCSS) + stylesheetTags(input.Styles),
 		documentSlotScript:  headElementTags(input.Script),
 		documentSlotApp:     input.HTML,
 		documentSlotData:    hydrationDataScript(input.DataElementID, input.HydrationJSON),
