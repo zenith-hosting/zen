@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useState } from "react";
 
 type CounterProps = {
   count: number;
@@ -9,7 +9,7 @@ export default function Counter(props: CounterProps) {
 
   return (
     <button
-      class="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
+      className="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
       type="button"
       onClick={() => setCount((current) => current + 1)}
     >

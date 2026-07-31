@@ -6,7 +6,7 @@ Zen is a tiny Go-first SSR framework that glues together:
 
 * Any Go HTTP framework for routing and request handling; the starter uses net/http
 * Vite for frontend dev/build behavior
-* Preact for server-rendered and hydrated frontend pages
+* React for server-rendered and hydrated frontend pages
 * Tailwind for styling
 * Air for Go hot reload during development
 
@@ -14,9 +14,9 @@ Zen is not trying to replace these tools. It should make them work together with
 
 The core philosophy is:
 
-> Developers should feel like they are using their HTTP framework, Vite, Preact, Tailwind, and Air directly. Zen should only remove the repetitive bridge slop between them.
+> Developers should feel like they are using their HTTP framework, Vite, React, Tailwind, and Air directly. Zen should only remove the repetitive bridge slop between them.
 
-Do not add abstractions that make developers learn “the Zen way” for things their HTTP framework, Vite, Preact, Tailwind, or Air already do well.
+Do not add abstractions that make developers learn “the Zen way” for things their HTTP framework, Vite, React, Tailwind, or Air already do well.
 
 ---
 
@@ -30,11 +30,11 @@ Browser
   -> normal framework route handler
   -> renderer.RenderPage(ctx, url, "Page", props)
   -> HTTP call to Node renderer
-  -> Vite/Preact SSR
+  -> Vite/React SSR
   -> Zen injects SSR output into frontend/index.html
   -> Zen returns status, content type, and body
   -> framework writes the response
-  -> browser hydrates Preact page
+  -> browser hydrates React page
 ```
 
 Development mode:
@@ -181,7 +181,7 @@ Do not add this kind of API unless explicitly requested and carefully justified.
 ### Vite owns
 
 * TypeScript/TSX transforms
-* Preact plugin behavior
+* React plugin behavior
 * Tailwind integration
 * Frontend dev server behavior
 * Frontend production builds
@@ -192,7 +192,7 @@ Zen should not reimplement Vite behavior in Go.
 
 ---
 
-### Preact owns
+### React owns
 
 * Page components
 * SSR rendering
@@ -306,7 +306,7 @@ Slot meanings:
 * `<!--zen:style-->`: Go-generated `<style>` tag from `WithStyle` / `Style`
 * `<!--zen:styles-->`: production CSS links from the Vite manifest
 * `<!--zen:script-->`: Go-generated `<script>` tags from `WithScript` / `Script`
-* `<!--zen:app-->`: raw Preact SSR HTML
+* `<!--zen:app-->`: raw React SSR HTML
 * `<!--zen:data-->`: Go-generated safe hydration JSON script using `Config.DataElementID`
 * `<!--zen:scripts-->`: Vite dev scripts or production client entry scripts
 
@@ -528,7 +528,7 @@ Acceptable starter dependencies so far:
 
 * Air
 * Vite
-* Preact
+* React
 * Tailwind
 
 Be cautious with protocol libraries, RPC frameworks, process managers, and anything that makes debugging less obvious.
@@ -555,7 +555,7 @@ response, err := renderer.RenderPage(ctx, url, "Home", props)
 
 Not replace it with a shiny proprietary lifecycle.
 
-If a feature requires users to learn a new Zen concept before they can understand what their HTTP framework, Vite, or Preact is doing, the feature is probably too big or pointed in the wrong direction.
+If a feature requires users to learn a new Zen concept before they can understand what their HTTP framework, Vite, or React is doing, the feature is probably too big or pointed in the wrong direction.
 
 ---
 

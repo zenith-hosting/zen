@@ -137,6 +137,12 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 	if client.req.URL != "/users?active=true" {
 		t.Fatalf("expected original URL, got %q", client.req.URL)
 	}
+	if client.req.IdentifierPrefix != "zen-page-" {
+		t.Fatalf("expected page identifier prefix, got %q", client.req.IdentifierPrefix)
+	}
+	if !strings.Contains(string(res.Body), `"identifierPrefix":"zen-page-"`) {
+		t.Fatalf("body missing page identifier prefix: %s", res.Body)
+	}
 }
 
 func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
@@ -285,6 +291,18 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 	}
 	if client.req.URL != "/counter" {
 		t.Fatalf("expected original URL, got %q", client.req.URL)
+	}
+	firstPrefix := client.req.IdentifierPrefix
+	if firstPrefix == "" {
+		t.Fatal("expected island identifier prefix")
+	}
+	if !strings.Contains(body, `"identifierPrefix":"`+firstPrefix+`"`) {
+		t.Fatalf("island fragment missing identifier prefix: %s", body)
+	}
+
+	mustRenderIsland(t, r, "/counter", "Counter", map[string]int{"count": 1})
+	if client.req.IdentifierPrefix == firstPrefix {
+		t.Fatalf("expected unique island identifier prefixes, got %q", firstPrefix)
 	}
 }
 

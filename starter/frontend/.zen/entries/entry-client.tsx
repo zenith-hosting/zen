@@ -1,5 +1,5 @@
-import { hydrate } from "preact";
-import type { ComponentType } from "preact";
+import type { ComponentType } from "react";
+import { hydrateRoot } from "react-dom/client";
 import "../../src/globals.css";
 
 type PageModule = {
@@ -9,6 +9,7 @@ type PageModule = {
 type HydrationData = {
   page?: string;
   island?: string;
+  identifierPrefix?: string;
   props: Record<string, unknown>;
 };
 
@@ -58,7 +59,9 @@ function hydratePage() {
     throw new Error("Missing app element");
   }
 
-  hydrate(<Page {...data.props} />, app);
+  hydrateRoot(app, <Page {...data.props} />, {
+    identifierPrefix: data.identifierPrefix
+  });
 }
 
 function hydrateIslands() {
@@ -77,7 +80,9 @@ function hydrateIslands() {
       throw new Error(`Unknown island: ${data.island}`);
     }
 
-    hydrate(<Island {...data.props} />, mount);
+    hydrateRoot(mount, <Island {...data.props} />, {
+      identifierPrefix: data.identifierPrefix
+    });
   }
 }
 

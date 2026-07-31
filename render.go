@@ -8,14 +8,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 )
 
-const htmlContentType = "text/html; charset=utf-8"
+const (
+	htmlContentType      = "text/html; charset=utf-8"
+	pageIdentifierPrefix = "zen-page-"
+)
 
 type Renderer struct {
-	config   Config
-	ssr      ssrClient
-	manifest viteManifest
+	config           Config
+	ssr              ssrClient
+	manifest         viteManifest
+	islandIdentifier atomic.Uint64
 }
 
 type Response struct {
@@ -103,18 +108,20 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 	}
 
 	res, err := r.ssr.Render(ctx, ssrRequest{
-		Mode:  "page",
-		URL:   url,
-		Page:  page,
-		Props: props,
+		Mode:             "page",
+		URL:              url,
+		Page:             page,
+		IdentifierPrefix: pageIdentifierPrefix,
+		Props:            props,
 	})
 	if err != nil {
 		return Response{}, err
 	}
 
 	hydrationJSON, err := serializeHydrationData(hydrationData{
-		Page:  page,
-		Props: props,
+		Page:             page,
+		IdentifierPrefix: pageIdentifierPrefix,
+		Props:            props,
 	})
 	if err != nil {
 		return Response{}, err
@@ -205,19 +212,22 @@ func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props a
 		ctx = context.Background()
 	}
 
+	identifierPrefix := fmt.Sprintf("zen-island-%d-", r.islandIdentifier.Add(1))
 	res, err := r.ssr.Render(ctx, ssrRequest{
-		Mode:   "island",
-		URL:    url,
-		Island: island,
-		Props:  props,
+		Mode:             "island",
+		URL:              url,
+		Island:           island,
+		IdentifierPrefix: identifierPrefix,
+		Props:            props,
 	})
 	if err != nil {
 		return Response{}, err
 	}
 
 	hydrationJSON, err := serializeHydrationData(hydrationData{
-		Island: island,
-		Props:  props,
+		Island:           island,
+		IdentifierPrefix: identifierPrefix,
+		Props:            props,
 	})
 	if err != nil {
 		return Response{}, err

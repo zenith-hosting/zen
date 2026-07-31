@@ -1,5 +1,5 @@
-import renderToString from "preact-render-to-string";
-import type { ComponentType } from "preact";
+import type { ComponentType } from "react";
+import { renderToString } from "react-dom/server";
 
 type ComponentModule = {
   default: ComponentType<Record<string, unknown>>;
@@ -10,6 +10,7 @@ type RenderRequest = {
   url: string;
   page?: string;
   island?: string;
+  identifierPrefix?: string;
   props?: Record<string, unknown>;
 };
 
@@ -47,7 +48,9 @@ export async function render(request: RenderRequest) {
     }
 
     return {
-      html: renderToString(<Island {...props} />),
+      html: renderToString(<Island {...props} />, {
+        identifierPrefix: request.identifierPrefix
+      }),
       head: ""
     };
   }
@@ -62,7 +65,9 @@ export async function render(request: RenderRequest) {
     throw new Error(`Unknown page: ${request.page}`);
   }
 
-  const html = renderToString(<Page {...props} />);
+  const html = renderToString(<Page {...props} />, {
+    identifierPrefix: request.identifierPrefix
+  });
 
   return {
     html,

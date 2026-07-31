@@ -1,8 +1,8 @@
 # Zen
 
-Zen is tiny glue for building server-rendered Go apps with any Go HTTP framework, Vite, Preact, Tailwind, and Air.
+Zen is tiny glue for building server-rendered Go apps with any Go HTTP framework, Vite, React, Tailwind, and Air.
 
-It does not replace those tools. It keeps your HTTP framework in charge of requests and responses, Vite in charge of frontend builds and dev behavior, Preact in charge of components and hydration, Tailwind in charge of styling, and Air in charge of Go hot reload.
+It does not replace those tools. It keeps your HTTP framework in charge of requests and responses, Vite in charge of frontend builds and dev behavior, React in charge of components and hydration, Tailwind in charge of styling, and Air in charge of Go hot reload.
 
 ## Install
 
@@ -118,7 +118,7 @@ pnpm build
 pnpm start
 ```
 
-These commands are ordinary `package.json` scripts. Tidy updates Go modules and installs frontend dependencies. Development starts the Vite/Preact renderer and Air, with Tailwind handled by Vite. Build creates the frontend bundles and `./bin/app`. Start runs those existing production artifacts and never builds.
+These commands are ordinary `package.json` scripts. Tidy updates Go modules and installs frontend dependencies. Development starts the Vite/React renderer and Air, with Tailwind handled by Vite. Build creates the frontend bundles and `./bin/app`. Start runs those existing production artifacts and never builds.
 
 ## Repository
 

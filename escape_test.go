@@ -28,7 +28,8 @@ func TestSerializeDataEscapesScriptBreakout(t *testing.T) {
 
 func TestSerializeDataIncludesPageAndProps(t *testing.T) {
 	payload := hydrationData{
-		Page: "Home",
+		Page:             "Home",
+		IdentifierPrefix: "zen-page-",
 		Props: map[string]string{
 			"title": "Hello",
 		},
@@ -44,5 +45,8 @@ func TestSerializeDataIncludesPageAndProps(t *testing.T) {
 	}
 	if !strings.Contains(got, `"title":"Hello"`) {
 		t.Fatalf("serialized payload missing props: %s", got)
+	}
+	if !strings.Contains(got, `"identifierPrefix":"zen-page-"`) {
+		t.Fatalf("serialized payload missing identifier prefix: %s", got)
 	}
 }
