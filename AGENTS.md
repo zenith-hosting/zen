@@ -38,7 +38,7 @@ Browser
 Development mode:
 
 ```text
-zen dev
+pnpm dev
   -> starts dev renderer
   -> starts Go app through Air
 ```
@@ -46,12 +46,12 @@ zen dev
 Production mode:
 
 ```text
-zen build
+pnpm build
   -> builds frontend client assets
   -> builds frontend SSR bundle
   -> builds Go binary
 
-zen start
+pnpm start
   -> starts production renderer
   -> starts compiled Go binary with ZEN_ENV=prod
 ```
@@ -68,48 +68,35 @@ Run all Go tests:
 go test ./...
 ```
 
-Run Node renderer tests:
+Run the starter app in development:
 
 ```bash
-node --test js/renderers/*.test.mjs
-node --test scripts/*.test.mjs
+cd starter
+pnpm dev
 ```
 
-Build the Zen CLI:
+Build the starter app:
 
 ```bash
-go build -o ./bin/zen ./zencli/cmd/zen
+cd starter
+pnpm build
 ```
 
-Run the example app in development:
+Start the starter app from production artifacts:
 
 ```bash
-cd examples/basic
-../../bin/zen dev
+cd starter
+pnpm start
 ```
 
-Build the example app:
+Create a new project:
 
 ```bash
-cd examples/basic
-../../bin/zen build
+git clone https://github.com/zenith-hosting/zen-starter my-app
+cd my-app
+pnpm tidy
+pnpm dev
 ```
-
-Start the example app from production artifacts:
-
-```bash
-cd examples/basic
-../../bin/zen start
-```
-
-Initialize a new project:
-
-```bash
-zen init
-zen dev
-```
-
-`zen init` runs `go mod tidy`, `pnpm --dir frontend install`, and `pnpm --dir frontend approve-builds --all` after writing files.
 
 ---
 
@@ -128,32 +115,21 @@ Expected high-level structure:
   ssr_client.go
   ssr_http_client.go
 
-zencli/
+starter/
+  package.json
+  main.go
   go.mod
-  cmd/
-    zen/
-      main.go
-  internal/
-    zencli/
+  frontend/
+    .zen/
+      entries/
+        entry-client.tsx
+        entry-server.tsx
+      renderers/
+        renderer-shared.mjs
+        dev-renderer.mjs
+        prod-renderer.mjs
+    src/
 
-js/
-  entries/
-    entry-client.tsx
-    entry-server.tsx
-  renderers/
-    renderer-shared.mjs
-    dev-renderer.mjs
-    prod-renderer.mjs
-
-examples/
-  basic/
-    main.go
-    zen.config.json
-    .air.toml
-    frontend/
-      package.json
-      vite.config.ts
-      src/
 ```
 
 The root Go module is:
@@ -162,13 +138,7 @@ The root Go module is:
 github.com/zenith-hosting/zen
 ```
 
-The CLI is an in-repo Go module:
-
-```text
-github.com/zenith-hosting/zen/zencli
-```
-
-Do not merge CLI implementation code into the root Zen library package. Keeping `zencli` as a separate subdirectory module lets the root module stay usable as a library dependency without CLI code.
+The starter defines the workflow directly in `package.json` scripts invoked through `pnpm tidy`, `pnpm dev`, `pnpm build`, and `pnpm start`. Zen does not need a general-purpose CLI or process manager.
 
 ---
 
@@ -248,7 +218,7 @@ Zen should not add its own styling abstraction.
 * Go hot reload
 * Rebuilding/restarting the Go app during development
 
-Zen should only start Air as part of `zen dev`.
+The `pnpm dev` package script should be the only workflow that starts Air.
 
 ---
 
@@ -284,23 +254,10 @@ import { createServer as createViteServer } from "vite";
 
 Do not move renderer runtime files back to root `.zen/renderers` unless dependency resolution is redesigned.
 
-Canonical renderer and entry sources live in:
+Renderer and entry sources live in:
 
 ```text
-js/entries/
-js/renderers/
-```
-
-The starter-template copies live in the `zencli` module:
-
-```text
-zencli/internal/zencli/init_template/frontend/.zen/
-```
-
-After changing renderer or entry source files, run:
-
-```bash
-node scripts/sync-renderers.mjs
+starter/frontend/.zen/
 ```
 
 ---
@@ -368,7 +325,7 @@ renderer.RenderPage(c, "Home", props,
 
 Attribute values are escaped by Zen. Use `Attr(name, value)` for less-common attributes; unsafe attribute names are skipped. `Text` is raw element text for scripts, and `WithStyle` takes raw CSS directly as a string.
 
-The starter and examples should keep this shape:
+The starter should keep this shape:
 
 ```html
 <div id="app"><!--zen:app--></div>
@@ -395,10 +352,7 @@ document_test.go
 head.go
 render.go
 render_test.go
-zencli/internal/zencli/init_template/frontend/index.html
-zencli/internal/zencli/init_templates_test.go
-examples/basic/frontend/index.html
-examples/todo/frontend/index.html
+starter/frontend/index.html
 ```
 
 ---
@@ -457,93 +411,28 @@ Keep the protocol boring. Do not introduce WebSocket, JSON-RPC, gRPC, or a custo
 
 ---
 
-## CLI Behavior
+## Project Script Behavior
 
-### `zen init`
-
-Should create a complete runnable starter project, not just config files.
-
-It should write:
+The starter contains app-owned `package.json` scripts:
 
 ```text
-zen.config.json
-.air.toml
-go.mod
-main.go
-package.json
-frontend/package.json
-frontend/tsconfig.json
-frontend/vite.config.ts
-frontend/index.html
-frontend/src/app.css
-frontend/src/pages.ts
-frontend/src/pages/Home.tsx
-frontend/src/pages/User.tsx
-frontend/.zen/entries/entry-client.tsx
-frontend/.zen/entries/entry-server.tsx
-frontend/.zen/renderers/renderer-shared.mjs
-frontend/.zen/renderers/dev-renderer.mjs
-frontend/.zen/renderers/prod-renderer.mjs
+pnpm tidy
+pnpm dev
+pnpm build
+pnpm start
 ```
 
-`frontend/index.html` must include the required Zen document slots listed in "HTML Document Template Rules". It should not hard-code a direct `.zen/entries/entry-client.tsx` script tag; Zen injects the dev or production client scripts into `<!--zen:scripts-->`.
+There is no init command. New projects come from the starter repository.
 
-Then it should install dependencies, leaving the user with a working project:
+`pnpm tidy` runs `go mod tidy` and `pnpm --dir frontend install` in order.
 
-```sh
-go mod tidy
-pnpm --dir frontend install
-pnpm --dir frontend approve-builds --all
-```
+`pnpm dev` starts the development renderer from `frontend/` and the Go app through Air with `ZEN_ENV=dev`. Tailwind is handled by the existing Vite plugin; do not add a separate Tailwind watcher.
 
-`zen init` should refuse to overwrite existing developer-owned files.
+`pnpm build` runs `pnpm --dir frontend build`, creates `bin/`, and runs `go build -o ./bin/app .`.
 
-The one exception is the Zen-managed runtime directory `{frontendDir}/.zen` (renderer and entry files). `zen init` always replaces it wholesale, removing any existing copy first, so an existing project checked out on a new machine gets runtime files matching the installed CLI. For existing projects the directory is resolved against the `frontendDir` from `zen.config.json` (defaulting to `frontend`); new projects always use the starter `frontend/.zen`.
+`pnpm start` verifies the production binary, SSR entry, and Vite manifest, then starts the production renderer from `frontend/` and `ZEN_ENV=prod ./bin/app`. It never builds.
 
-### `zen dev`
-
-Should only create a development environment.
-
-It should start:
-
-```text
-renderer: node .zen/renderers/dev-renderer.mjs
-app:      go tool air -c .air.toml
-```
-
-It should not build production artifacts.
-
-It should not inspect `ZEN_ENV=prod`.
-
-It should not run production mode.
-
-### `zen build`
-
-Should build production artifacts.
-
-It should run:
-
-```text
-pnpm --dir frontend build
-go build -o ./bin/app .
-```
-
-### `zen start`
-
-Should start production artifacts.
-
-It should run:
-
-```text
-renderer: node .zen/renderers/prod-renderer.mjs
-app:      ZEN_ENV=prod ./bin/app
-```
-
-`zen start` should not build. If artifacts are missing, it should clearly tell the user to run:
-
-```bash
-zen build
-```
+Keep the scripts project-local and conventional. Do not add JSON parsing, log prefixing, health polling, a template generator, or a compatibility binary unless a demonstrated need justifies it.
 
 ---
 
@@ -578,7 +467,7 @@ Good:
 zen: missing production artifact frontend/dist/server/entry-server.js.
 
 Run:
-  zen build
+  pnpm build
 ```
 
 Bad:
@@ -602,29 +491,6 @@ Use test-first development for behavior changes.
 For Go:
 
 ```bash
-go test ./...
-```
-
-For Node renderer behavior:
-
-```bash
-node --test js/renderers/*.test.mjs
-node --test scripts/*.test.mjs
-```
-
-For CLI behavior, prefer small tests around pure planning functions:
-
-* `devPlan`
-* `startPlan`
-* `buildPlan`
-* `starterFiles`
-* `ensureFrontendDependencies`
-* `ensureProductionArtifacts`
-
-CLI tests live in the `zencli` module. Run them from that module or through the workspace:
-
-```bash
-cd zencli
 go test ./...
 ```
 
@@ -702,30 +568,23 @@ Run:
 
 ```bash
 go test ./...
-node --test js/renderers/*.test.mjs
-node --test scripts/*.test.mjs
 ```
 
-When changing the CLI, also run:
-
-```bash
-go build -o ./bin/zen ./zencli/cmd/zen
-```
-
-When changing starter templates, validate:
+When changing the starter, validate:
 
 ```bash
 tmpdir="$(mktemp -d)"
+cp -R starter/. "$tmpdir"
 cd "$tmpdir"
-/path/to/zen/bin/zen init
-/path/to/zen/bin/zen dev
+pnpm tidy
+pnpm dev
 ```
 
 When changing production behavior, validate:
 
 ```bash
-zen build
-zen start
+pnpm build
+pnpm start
 ```
 
 Then request:

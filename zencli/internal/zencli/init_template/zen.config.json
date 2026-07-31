@@ -1,8 +1,0 @@
-{
-  "mainPath": ".",
-  "airCommand": "go tool air -c .air.toml",
-  "frontendDir": "frontend",
-  "devRendererPort": 5173,
-  "prodRendererPort": 4174,
-  "binaryPath": "./bin/app"
-}

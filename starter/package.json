@@ -1,0 +1,11 @@
+{
+  "name": "zen-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tidy": "go mod tidy && pnpm --dir frontend install",
+    "dev": "test -f frontend/node_modules/vite/package.json || { echo 'zen: missing frontend dependencies; run: pnpm tidy' >&2; exit 1; }; (cd frontend && exec node .zen/renderers/dev-renderer.mjs) & renderer=$!; ZEN_ENV=dev go tool air -c .air.toml & app=$!; cleanup() { kill \"$renderer\" \"$app\" 2>/dev/null || true; wait \"$renderer\" \"$app\" 2>/dev/null || true; }; trap cleanup 0; trap 'exit 130' INT; trap 'exit 143' TERM; while kill -0 \"$renderer\" 2>/dev/null && kill -0 \"$app\" 2>/dev/null; do sleep 1; done; exit 1",
+    "build": "pnpm --dir frontend build && mkdir -p bin && go build -o ./bin/app .",
+    "start": "for artifact in ./bin/app frontend/dist/server/entry-server.js frontend/dist/client/.vite/manifest.json; do test -f \"$artifact\" || { echo 'zen: missing production artifacts; run: pnpm build' >&2; exit 1; }; done; (cd frontend && exec node .zen/renderers/prod-renderer.mjs) & renderer=$!; ZEN_ENV=prod ./bin/app & app=$!; cleanup() { kill \"$renderer\" \"$app\" 2>/dev/null || true; wait \"$renderer\" \"$app\" 2>/dev/null || true; }; trap cleanup 0; trap 'exit 130' INT; trap 'exit 143' TERM; while kill -0 \"$renderer\" 2>/dev/null && kill -0 \"$app\" 2>/dev/null; do sleep 1; done; exit 1"
+  }
+}

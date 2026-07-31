@@ -175,7 +175,7 @@ func (r *Renderer) documentTemplate() (string, error) {
 	raw, err := os.ReadFile(r.config.DocumentPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("zen: missing document template %s.\n\nRun:\n  zen init", r.config.DocumentPath)
+			return "", fmt.Errorf("zen: missing document template %s; restore it or set Config.DocumentPath", r.config.DocumentPath)
 		}
 		return "", fmt.Errorf("zen: read document template %s: %w", r.config.DocumentPath, err)
 	}

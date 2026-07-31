@@ -216,6 +216,9 @@ func TestRendererDocumentTemplateReportsMissingFile(t *testing.T) {
 	if !strings.Contains(err.Error(), "zen: missing document template") {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if !strings.Contains(err.Error(), "restore it or set Config.DocumentPath") {
+		t.Fatalf("missing actionable recovery: %v", err)
+	}
 }
 
 func TestRenderIslandWritesHydratableFragment(t *testing.T) {

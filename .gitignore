@@ -3,8 +3,5 @@
 bin/
 node_modules/
 dist/
-examples/basic/basic
-examples/todo/todo
 tmp/
 main
-zen

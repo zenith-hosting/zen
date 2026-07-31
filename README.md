@@ -12,17 +12,17 @@ Use the library from Go apps:
 go get github.com/zenith-hosting/zen
 ```
 
-The CLI lives in this repo under `zencli/`:
+For a new app, clone the starter:
 
 ```bash
-go install github.com/zenith-hosting/zen/zencli/cmd/zen@latest
+git clone https://github.com/zenith-hosting/zen-starter my-app
+cd my-app
+go mod edit -module example.com/my-app
+pnpm tidy
+pnpm dev
 ```
 
-That command installs a `zen` binary. Build a local `zen` binary from this repo with:
-
-```bash
-go build -o ./bin/zen ./zencli/cmd/zen
-```
+The starter source also lives in this repository under `starter/`.
 
 ## Usage
 
@@ -97,45 +97,26 @@ renderer.RenderPage(c, "Home", props,
 
 Short aliases such as `zen.Base(...)`, `zen.Meta(...)`, and `zen.Link(...)` are also available.
 
-## CLI Workflow
-
-Create a starter project:
+## Project workflow
 
 ```bash
-zen init
-zen dev
+pnpm tidy
+pnpm dev
+pnpm build
+pnpm start
 ```
 
-`zen init` writes the starter project, runs `go mod tidy`, installs frontend dependencies, and approves required pnpm builds.
-
-Build and start production artifacts:
-
-```bash
-zen build
-zen start
-```
-
-`zen dev` starts the Vite/Preact renderer and the Go app through Air. `zen build` builds the frontend and Go binary. `zen start` starts existing production artifacts and does not build.
+These commands are ordinary `package.json` scripts. Tidy updates Go modules, installs frontend dependencies, and approves pnpm builds. Development starts the Vite/Preact renderer and Air, with Tailwind handled by Vite. Build creates the frontend bundles and `./bin/app`. Start runs those existing production artifacts and never builds.
 
 ## Repository
 
-This repository is the Zen library module:
+This repository contains the Zen library module:
 
 ```text
 github.com/zenith-hosting/zen
 ```
 
-The CLI lives in this repository as its own Go module:
-
-```text
-github.com/zenith-hosting/zen/zencli
-```
-
-Canonical frontend runtime sources are in `js/entries` and `js/renderers`. The starter-template copies live under `zencli/internal/zencli/init_template`. Sync them with:
-
-```bash
-node scripts/sync-renderers.mjs
-```
+Canonical frontend runtime sources are in `starter/frontend/.zen`.
 
 ## Development
 
@@ -143,14 +124,4 @@ Run the main checks:
 
 ```bash
 go test ./...
-node --test js/renderers/*.test.mjs
-node --test scripts/*.test.mjs
-```
-
-Run CLI checks from the `zencli` module:
-
-```bash
-cd zencli
-go test ./...
-go build -o /tmp/zen ./cmd/zen
 ```
