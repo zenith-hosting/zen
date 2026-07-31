@@ -4,17 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/gofiber/fiber/v3"
 )
+
+const htmlContentType = "text/html; charset=utf-8"
 
 type Renderer struct {
 	config   Config
 	ssr      ssrClient
 	manifest viteManifest
+}
+
+type Response struct {
+	Status      int
+	ContentType string
+	Body        []byte
 }
 
 type RenderOption func(*renderOptions)
@@ -77,14 +84,10 @@ func New(config Config) (*Renderer, error) {
 	return r, nil
 }
 
-func (r *Renderer) Render(c fiber.Ctx, page string, props any, options ...RenderOption) error {
-	return r.RenderPage(c, page, props, options...)
-}
-
-func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...RenderOption) error {
+func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, options ...RenderOption) (Response, error) {
 	opts := renderOptions{
 		Title:  r.config.DefaultTitle,
-		Status: fiber.StatusOK,
+		Status: http.StatusOK,
 	}
 
 	for _, option := range options {
@@ -92,22 +95,21 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 	}
 
 	if r.ssr == nil {
-		return errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
+		return Response{}, errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
 	}
 
-	ctx := context.Background()
-	if userCtx := c.Context(); userCtx != nil {
-		ctx = userCtx
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	res, err := r.ssr.Render(ctx, ssrRequest{
 		Mode:  "page",
-		URL:   c.OriginalURL(),
+		URL:   url,
 		Page:  page,
 		Props: props,
 	})
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	hydrationJSON, err := serializeHydrationData(hydrationData{
@@ -115,12 +117,12 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 		Props: props,
 	})
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	assets, devScripts, err := r.clientEntryAssets()
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	// Inline the compiled CSS into a <style> instead of a <link> when asked (prod
@@ -130,14 +132,14 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 	if opts.InlineStyles && !r.config.Dev {
 		inlineCSS, err = r.readStyles(assets.Styles)
 		if err != nil {
-			return err
+			return Response{}, err
 		}
 		assets.Styles = nil
 	}
 
 	template, err := r.documentTemplate()
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	doc, err := renderDocumentTemplate(template, documentInput{
@@ -158,13 +160,16 @@ func (r *Renderer) RenderPage(c fiber.Ctx, page string, props any, options ...Re
 	})
 	if err != nil {
 		if strings.TrimSpace(r.config.DocumentPath) == "" {
-			return err
+			return Response{}, err
 		}
-		return fmt.Errorf("zen: invalid document template %s: %w", r.config.DocumentPath, err)
+		return Response{}, fmt.Errorf("zen: invalid document template %s: %w", r.config.DocumentPath, err)
 	}
 
-	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
-	return c.Status(opts.Status).SendString(doc)
+	return Response{
+		Status:      opts.Status,
+		ContentType: htmlContentType,
+		Body:        []byte(doc),
+	}, nil
 }
 
 func (r *Renderer) documentTemplate() (string, error) {
@@ -183,9 +188,9 @@ func (r *Renderer) documentTemplate() (string, error) {
 	return string(raw), nil
 }
 
-func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options ...RenderOption) error {
+func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props any, options ...RenderOption) (Response, error) {
 	opts := renderOptions{
-		Status: fiber.StatusOK,
+		Status: http.StatusOK,
 	}
 
 	for _, option := range options {
@@ -193,22 +198,21 @@ func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options .
 	}
 
 	if r.ssr == nil {
-		return errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
+		return Response{}, errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
 	}
 
-	ctx := context.Background()
-	if userCtx := c.Context(); userCtx != nil {
-		ctx = userCtx
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	res, err := r.ssr.Render(ctx, ssrRequest{
 		Mode:   "island",
-		URL:    c.OriginalURL(),
+		URL:    url,
 		Island: island,
 		Props:  props,
 	})
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	hydrationJSON, err := serializeHydrationData(hydrationData{
@@ -216,12 +220,12 @@ func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options .
 		Props:  props,
 	})
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	assets, devScripts, err := r.clientEntryAssets()
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
 	fragment := renderIslandFragment(islandFragmentInput{
@@ -233,8 +237,11 @@ func (r *Renderer) RenderIsland(c fiber.Ctx, island string, props any, options .
 		DevScripts:    devScripts,
 	})
 
-	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
-	return c.Status(opts.Status).SendString(fragment)
+	return Response{
+		Status:      opts.Status,
+		ContentType: htmlContentType,
+		Body:        []byte(fragment),
+	}, nil
 }
 
 func (r *Renderer) clientEntryAssets() (clientAssets, []string, error) {

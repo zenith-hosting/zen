@@ -2,18 +2,14 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/zenith-hosting/zen"
 )
 
 func main() {
-	app := fiber.New()
-	app.Use(logger.New())
-
 	dev := os.Getenv("ZEN_ENV") != "prod"
 
 	port := ":3000"
@@ -33,30 +29,45 @@ func main() {
 	}
 	defer renderer.Close()
 
-	app.Get("/assets/*", renderer.Static())
+	log.Fatal(http.ListenAndServe(port, routes(renderer)))
+}
 
-	app.Get("/islands/counter", func(c fiber.Ctx) error {
-		return renderer.RenderIsland(c, "Counter", map[string]any{
+func routes(renderer *zen.Renderer) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(renderer.AssetsDir()))))
+
+	mux.HandleFunc("GET /islands/counter", func(w http.ResponseWriter, r *http.Request) {
+		response, err := renderer.RenderIsland(r.Context(), r.URL.RequestURI(), "Counter", map[string]any{
 			"count": 0,
 		})
+		send(w, response, err)
 	})
 
-	app.Post("/contact", func(c fiber.Ctx) error {
-		name := c.FormValue("name")
-		if name == "" {
-			return c.Status(fiber.StatusBadRequest).SendString("name is required")
+	mux.HandleFunc("POST /contact", func(w http.ResponseWriter, r *http.Request) {
+		if r.FormValue("name") == "" {
+			http.Error(w, "name is required", http.StatusBadRequest)
+			return
 		}
-
-		return c.Redirect().To("/")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 
-	app.Get("/*", func(c fiber.Ctx) error {
-		return renderer.RenderPage(c, "App", map[string]any{
-			"url": c.OriginalURL(),
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		url := r.URL.RequestURI()
+		response, err := renderer.RenderPage(r.Context(), url, "App", map[string]any{
+			"url": url,
 		}, zen.WithTitle("Zen App"))
+		send(w, response, err)
 	})
 
-	log.Fatal(app.Listen(port, fiber.ListenConfig{
-		DisableStartupMessage: true,
-	}))
+	return mux
+}
+
+func send(w http.ResponseWriter, response zen.Response, err error) {
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", response.ContentType)
+	w.WriteHeader(response.Status)
+	_, _ = w.Write(response.Body)
 }

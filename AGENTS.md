@@ -4,7 +4,7 @@
 
 Zen is a tiny Go-first SSR framework that glues together:
 
-* Fiber for backend routing and request handling
+* Any Go HTTP framework for routing and request handling; the starter uses net/http
 * Vite for frontend dev/build behavior
 * Preact for server-rendered and hydrated frontend pages
 * Tailwind for styling
@@ -14,9 +14,9 @@ Zen is not trying to replace these tools. It should make them work together with
 
 The core philosophy is:
 
-> Developers should feel like they are using Fiber, Vite, Preact, Tailwind, and Air directly. Zen should only remove the repetitive bridge slop between them.
+> Developers should feel like they are using their HTTP framework, Vite, Preact, Tailwind, and Air directly. Zen should only remove the repetitive bridge slop between them.
 
-Do not add abstractions that make developers learn “the Zen way” for things Fiber, Vite, Preact, Tailwind, or Air already do well.
+Do not add abstractions that make developers learn “the Zen way” for things their HTTP framework, Vite, Preact, Tailwind, or Air already do well.
 
 ---
 
@@ -26,12 +26,14 @@ A Zen app works like this:
 
 ```text
 Browser
-  -> Fiber app
-  -> normal Fiber route handler
-  -> renderer.Render(c, "Page", props)
+  -> Go HTTP app
+  -> normal framework route handler
+  -> renderer.RenderPage(ctx, url, "Page", props)
   -> HTTP call to Node renderer
   -> Vite/Preact SSR
   -> Zen injects SSR output into frontend/index.html
+  -> Zen returns status, content type, and body
+  -> framework writes the response
   -> browser hydrates Preact page
 ```
 
@@ -111,7 +113,7 @@ Expected high-level structure:
   document.go
   escape.go
   manifest.go
-  static.go
+  assets.go
   ssr_client.go
   ssr_http_client.go
 
@@ -144,7 +146,7 @@ The starter defines the workflow directly in `package.json` scripts invoked thro
 
 ## Boundaries
 
-### Fiber owns
+### The HTTP framework owns
 
 * Routes
 * Middleware
@@ -156,14 +158,12 @@ The starter defines the workflow directly in `package.json` scripts invoked thro
 * Errors
 * Static asset route registration
 
-Zen should not wrap Fiber into a second routing framework.
+Zen should not wrap the selected HTTP framework into a second routing framework.
 
 Good:
 
 ```go
-app.Get("/", func(c fiber.Ctx) error {
-	return renderer.Render(c, "Home", props)
-})
+response, err := renderer.RenderPage(ctx, url, "Home", props)
 ```
 
 Bad:
@@ -278,7 +278,7 @@ frontend/index.html
 
 where `frontendDir` comes from `zen.config.json` and defaults to `frontend`.
 
-The Go renderer reads this template for `RenderPage`, replaces Zen slots, and sends the final HTML response. Keep this as simple string slot replacement. Do not introduce an HTML parser, metadata DSL, layout system, Vite `transformIndexHtml`, or a Next-style document API unless explicitly requested and carefully justified.
+The Go renderer reads this template for `RenderPage`, replaces Zen slots, and returns the final HTML response data. Keep this as simple string slot replacement. Do not introduce an HTML parser, metadata DSL, layout system, Vite `transformIndexHtml`, or a Next-style document API unless explicitly requested and carefully justified.
 
 Required template slots:
 
@@ -313,7 +313,7 @@ Slot meanings:
 Go-owned head elements should use the structured render options:
 
 ```go
-renderer.RenderPage(c, "Home", props,
+renderer.RenderPage(ctx, url, "Home", props,
 	zen.WithTitle("Home"),
 	zen.WithBase(zen.Href("/")),
 	zen.WithMeta(zen.Name("description"), zen.Content("Page description")),
@@ -524,9 +524,8 @@ Adding a dependency is allowed when it removes meaningful maintenance burden.
 
 Adding a dependency is not allowed when it mostly creates a new abstraction developers have to understand.
 
-Acceptable dependencies so far:
+Acceptable starter dependencies so far:
 
-* Fiber
 * Air
 * Vite
 * Preact
@@ -551,14 +550,12 @@ small over complete
 Zen should make this workflow pleasant:
 
 ```go
-app.Get("/", func(c fiber.Ctx) error {
-	return renderer.Render(c, "Home", props)
-})
+response, err := renderer.RenderPage(ctx, url, "Home", props)
 ```
 
 Not replace it with a shiny proprietary lifecycle.
 
-If a feature requires users to learn a new Zen concept before they can understand what Fiber, Vite, or Preact is doing, the feature is probably too big or pointed in the wrong direction.
+If a feature requires users to learn a new Zen concept before they can understand what their HTTP framework, Vite, or Preact is doing, the feature is probably too big or pointed in the wrong direction.
 
 ---
 
@@ -617,7 +614,7 @@ Zen is not:
 * a form framework
 * a deployment platform
 * a replacement for Vite
-* a replacement for Fiber
+* a replacement for a Go HTTP framework
 * a replacement for Air
 
 Zen is glue.

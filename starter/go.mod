@@ -2,10 +2,7 @@ module zen-app
 
 go 1.25.0
 
-require (
-	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/zenith-hosting/zen v0.0.12
-)
+require github.com/zenith-hosting/zen v0.0.12
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
@@ -16,6 +13,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/gofiber/fiber/v3 v3.3.0 // indirect
 	github.com/gofiber/schema v1.8.0 // indirect
 	github.com/gofiber/utils/v2 v2.1.0 // indirect
 	github.com/gohugoio/hugo v0.149.1 // indirect

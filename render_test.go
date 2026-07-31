@@ -1,6 +1,7 @@
 package zen
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,10 +10,25 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/gofiber/fiber/v3"
-	"github.com/zenith-hosting/zen/internal/testutil"
 )
+
+func mustRenderPage(t *testing.T, r *Renderer, url, page string, props any, options ...RenderOption) Response {
+	t.Helper()
+	response, err := r.RenderPage(context.Background(), url, page, props, options...)
+	if err != nil {
+		t.Fatalf("render page: %v", err)
+	}
+	return response
+}
+
+func mustRenderIsland(t *testing.T, r *Renderer, url, island string, props any, options ...RenderOption) Response {
+	t.Helper()
+	response, err := r.RenderIsland(context.Background(), url, island, props, options...)
+	if err != nil {
+		t.Fatalf("render island: %v", err)
+	}
+	return response
+}
 
 func TestNewRendererAppliesDefaults(t *testing.T) {
 	r, err := New(Config{
@@ -44,7 +60,7 @@ func TestNewRendererRejectsInvalidProductionConfig(t *testing.T) {
 	}
 }
 
-func TestRenderWritesSSRDocumentToFiberResponse(t *testing.T) {
+func TestRenderReturnsSSRDocument(t *testing.T) {
 	client := &fakeSSRClient{
 		res: ssrResponse{
 			HTML: `<main><h1>Hello</h1></main>`,
@@ -62,18 +78,19 @@ func TestRenderWritesSSRDocumentToFiberResponse(t *testing.T) {
 		ssr: client,
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Home", map[string]string{
-			"title": "Hello",
-		})
+	res, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{
+		"title": "Hello",
 	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	body := string(res.Body)
 
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-	body := testutil.ReadBody(t, res)
-
-	if res.StatusCode != 200 {
-		t.Fatalf("expected status 200, got %d", res.StatusCode)
+	if res.Status != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Status)
+	}
+	if res.ContentType != "text/html; charset=utf-8" {
+		t.Fatalf("unexpected content type %q", res.ContentType)
 	}
 	if !strings.Contains(body, `<main><h1>Hello</h1></main>`) {
 		t.Fatalf("body missing ssr html: %s", body)
@@ -104,23 +121,21 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 		ssr: client,
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.RenderPage(c, "Home", map[string]string{
-			"title": "Hello",
-		})
+	res := mustRenderPage(t, r, "/users?active=true", "Home", map[string]string{
+		"title": "Hello",
 	})
 
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-
-	if res.StatusCode != 200 {
-		t.Fatalf("expected status 200, got %d", res.StatusCode)
+	if res.Status != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Status)
 	}
 	if client.req.Mode != "page" {
 		t.Fatalf("expected page render mode, got %q", client.req.Mode)
 	}
 	if client.req.Page != "Home" {
 		t.Fatalf("expected page Home, got %q", client.req.Page)
+	}
+	if client.req.URL != "/users?active=true" {
+		t.Fatalf("expected original URL, got %q", client.req.URL)
 	}
 }
 
@@ -168,21 +183,20 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 		ssr: client,
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.RenderPage(c, "Home", map[string]string{"title": "Hello"},
-			WithTitle("Custom <Title>"),
-			Base(Href("/")),
-			WithMeta(Name("description"), Content("From Go <unsafe>")),
-			WithLink(Rel("canonical"), Href("https://example.com/?q=<unsafe>"), Attr("data-source", "go <unsafe>")),
-			WithStyle(`body { color: red; }`),
-			WithScript(Type("application/ld+json"), Text(`{"name":"Home"}`)),
-		)
-	})
+	res := mustRenderPage(t, r, "/", "Home", map[string]string{"title": "Hello"},
+		WithTitle("Custom <Title>"),
+		WithStatus(http.StatusCreated),
+		Base(Href("/")),
+		WithMeta(Name("description"), Content("From Go <unsafe>")),
+		WithLink(Rel("canonical"), Href("https://example.com/?q=<unsafe>"), Attr("data-source", "go <unsafe>")),
+		WithStyle(`body { color: red; }`),
+		WithScript(Type("application/ld+json"), Text(`{"name":"Home"}`)),
+	)
+	body := string(res.Body)
 
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-	body := testutil.ReadBody(t, res)
-
+	if res.Status != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", res.Status)
+	}
 	for _, want := range []string{
 		`<body class="custom-shell">`,
 		`<title>Custom &lt;Title&gt;</title>`,
@@ -239,18 +253,13 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 		ssr: client,
 	}
 
-	app := fiber.New()
-	app.Get("/counter", func(c fiber.Ctx) error {
-		return r.RenderIsland(c, "Counter", map[string]int{
-			"count": 0,
-		})
+	res := mustRenderIsland(t, r, "/counter", "Counter", map[string]int{
+		"count": 0,
 	})
+	body := string(res.Body)
 
-	res := testutil.PerformRequest(t, app, "GET", "/counter", "")
-	body := testutil.ReadBody(t, res)
-
-	if res.StatusCode != 200 {
-		t.Fatalf("expected status 200, got %d", res.StatusCode)
+	if res.Status != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Status)
 	}
 	if strings.Contains(body, "<!doctype html>") {
 		t.Fatalf("island render should not return a full document: %s", body)
@@ -273,6 +282,9 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 	}
 	if client.req.Island != "Counter" {
 		t.Fatalf("expected island Counter, got %q", client.req.Island)
+	}
+	if client.req.URL != "/counter" {
+		t.Fatalf("expected original URL, got %q", client.req.URL)
 	}
 }
 
@@ -299,15 +311,10 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 		},
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Home", map[string]string{
-			"title": "Production",
-		})
+	res := mustRenderPage(t, r, "/", "Home", map[string]string{
+		"title": "Production",
 	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-	body := testutil.ReadBody(t, res)
+	body := string(res.Body)
 
 	if !strings.Contains(body, `<link rel="stylesheet" href="/assets/app.def456.css">`) {
 		t.Fatalf("body missing production css: %s", body)
@@ -343,15 +350,10 @@ func TestRenderIslandInjectsProductionManifestAssets(t *testing.T) {
 		},
 	}
 
-	app := fiber.New()
-	app.Get("/counter", func(c fiber.Ctx) error {
-		return r.RenderIsland(c, "Counter", map[string]int{
-			"count": 0,
-		})
+	res := mustRenderIsland(t, r, "/counter", "Counter", map[string]int{
+		"count": 0,
 	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/counter", "")
-	body := testutil.ReadBody(t, res)
+	body := string(res.Body)
 
 	if !strings.Contains(body, `<link rel="stylesheet" href="/assets/app.def456.css">`) {
 		t.Fatalf("body missing production css: %s", body)
@@ -403,19 +405,13 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 		ssr: nil,
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Home", map[string]string{})
-	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-
-	if res.StatusCode == fiber.StatusOK {
-		t.Fatal("expected non-200 status when renderer has no ssr client")
+	_, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{})
+	if err == nil {
+		t.Fatal("expected missing ssr client error")
 	}
 }
 
-func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
+func TestRenderReturnsRendererHTTPError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -443,15 +439,12 @@ func TestRenderReturnsRendererHTTPErrorThroughFiber(t *testing.T) {
 		}),
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Home", map[string]string{})
-	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-
-	if res.StatusCode == fiber.StatusOK {
-		t.Fatal("expected non-200 response")
+	_, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{})
+	if err == nil {
+		t.Fatal("expected renderer error")
+	}
+	if !strings.Contains(err.Error(), "renderer exploded") {
+		t.Fatalf("unexpected renderer error: %v", err)
 	}
 }
 
@@ -486,13 +479,8 @@ func TestRenderInlineStylesEmitsStyleTagInsteadOfLink(t *testing.T) {
 		},
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Public", map[string]string{}, WithInlineStyles())
-	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-	body := testutil.ReadBody(t, res)
+	res := mustRenderPage(t, r, "/", "Public", map[string]string{}, WithInlineStyles())
+	body := string(res.Body)
 
 	if !strings.Contains(body, "<style>"+css+"</style>") {
 		t.Fatalf("body missing inlined css: %s", body)
@@ -522,13 +510,8 @@ func TestRenderInlineStylesIgnoredInDev(t *testing.T) {
 		ssr: client,
 	}
 
-	app := fiber.New()
-	app.Get("/", func(c fiber.Ctx) error {
-		return r.Render(c, "Public", map[string]string{}, WithInlineStyles())
-	})
-
-	res := testutil.PerformRequest(t, app, "GET", "/", "")
-	body := testutil.ReadBody(t, res)
+	res := mustRenderPage(t, r, "/", "Public", map[string]string{}, WithInlineStyles())
+	body := string(res.Body)
 
 	// Dev injects CSS via the Vite client; inlining is a no-op and must not break.
 	if strings.Contains(body, "<style>") && !strings.Contains(body, "@vite/client") {
