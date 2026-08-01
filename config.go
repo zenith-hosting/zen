@@ -16,11 +16,7 @@ type Config struct {
 	RenderTimeout time.Duration
 
 	ProjectRoot  string
-	DocumentPath string
-
-	AppElementID  string
-	DataElementID string
-	DefaultTitle  string
+	DefaultTitle string
 
 	viteURL       string
 	renderURL     string
@@ -87,10 +83,6 @@ func (c Config) withDefaults() Config {
 
 	frontendDir := filepath.Join(root, project.FrontendDir)
 
-	if c.DocumentPath == "" {
-		c.DocumentPath = filepath.Join(frontendDir, "index.html")
-	}
-
 	if c.Dev {
 		if c.viteURL == "" {
 			c.viteURL = "http://localhost:" + intString(project.DevRendererPort)
@@ -113,18 +105,6 @@ func (c Config) withDefaults() Config {
 		}
 	}
 
-	if c.AppElementID == "" {
-		c.AppElementID = "app"
-	}
-
-	if c.DataElementID == "" {
-		c.DataElementID = "__ZEN_DATA__"
-	}
-
-	if c.DefaultTitle == "" {
-		c.DefaultTitle = "Zen"
-	}
-
 	if c.RenderTimeout == 0 {
 		c.RenderTimeout = 5 * time.Second
 	}
@@ -135,14 +115,6 @@ func (c Config) withDefaults() Config {
 func (c Config) validate() error {
 	if c.configLoadErr != nil {
 		return c.configLoadErr
-	}
-
-	if c.AppElementID == "" {
-		return errors.New("zen: AppElementID is required")
-	}
-
-	if c.DataElementID == "" {
-		return errors.New("zen: DataElementID is required")
 	}
 
 	if strings.TrimSpace(c.renderURL) == "" {

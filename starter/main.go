@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/zenith-hosting/zen"
@@ -35,27 +36,40 @@ func main() {
 func routes(renderer *zen.Renderer) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(renderer.AssetsDir()))))
-
-	mux.HandleFunc("GET /islands/counter", func(w http.ResponseWriter, r *http.Request) {
-		response, err := renderer.RenderIsland(r.Context(), r.URL.RequestURI(), "Counter", map[string]any{
-			"count": 0,
-		})
-		send(w, response, err)
-	})
-
-	mux.HandleFunc("POST /contact", func(w http.ResponseWriter, r *http.Request) {
-		if r.FormValue("name") == "" {
+	mux.HandleFunc("GET /user", func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimSpace(r.URL.Query().Get("name"))
+		if name == "" {
 			http.Error(w, "name is required", http.StatusBadRequest)
 			return
 		}
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+
+		response, err := renderer.RenderIsland(r.Context(), r.URL.RequestURI(), "User", map[string]any{"name": name})
+		send(w, response, err)
 	})
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.RequestURI()
-		response, err := renderer.RenderPage(r.Context(), url, "App", map[string]any{
-			"url": url,
-		}, zen.WithTitle("Zen App"))
+		props := map[string]any{"url": url}
+
+		if r.URL.Path == "/" {
+			counter, err := renderer.RenderIsland(r.Context(), url, "Counter", map[string]any{"count": 0})
+			if err != nil {
+				send(w, zen.Response{}, err)
+				return
+			}
+			props["counter"] = string(counter.Body)
+
+			if name := strings.TrimSpace(r.URL.Query().Get("name")); name != "" {
+				user, err := renderer.RenderIsland(r.Context(), url, "User", map[string]any{"name": name})
+				if err != nil {
+					send(w, zen.Response{}, err)
+					return
+				}
+				props["user"] = string(user.Body)
+			}
+		}
+
+		response, err := renderer.RenderPage(r.Context(), url, "App", props, zen.WithTitle("Zen App"))
 		send(w, response, err)
 	})
 

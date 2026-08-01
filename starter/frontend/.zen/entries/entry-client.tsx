@@ -13,29 +13,19 @@ type HydrationData = {
   props: Record<string, unknown>;
 };
 
-const pageModules = import.meta.glob<PageModule>("../../src/pages/**/*.tsx", {
-  eager: true
-});
+const pageModules = import.meta.glob<PageModule>([
+  "../../src/pages/**/*.tsx",
+  "!../../src/pages/**/*.test.tsx",
+  "!../../src/pages/**/*.spec.tsx"
+]);
 
-const pages = Object.fromEntries(
-  Object.entries(pageModules).map(([path, mod]) => [
-    path.replace("../../src/pages/", "").replace(/\.tsx$/, ""),
-    mod.default
-  ])
-);
+const islandModules = import.meta.glob<PageModule>([
+  "../../src/islands/**/*.tsx",
+  "!../../src/islands/**/*.test.tsx",
+  "!../../src/islands/**/*.spec.tsx"
+]);
 
-const islandModules = import.meta.glob<PageModule>("../../src/islands/**/*.tsx", {
-  eager: true
-});
-
-const islands = Object.fromEntries(
-  Object.entries(islandModules).map(([path, mod]) => [
-    path.replace("../../src/islands/", "").replace(/\.tsx$/, ""),
-    mod.default
-  ])
-);
-
-function hydratePage() {
+async function hydratePage() {
   const element = document.getElementById("__ZEN_DATA__");
 
   if (!element) {
@@ -47,9 +37,9 @@ function hydratePage() {
   }
 
   const data = JSON.parse(element.textContent) as HydrationData;
-  const Page = pages[data.page ?? ""];
+  const load = pageModules[`../../src/pages/${data.page}.tsx`];
 
-  if (!Page) {
+  if (!load) {
     throw new Error(`Unknown page: ${data.page}`);
   }
 
@@ -59,32 +49,61 @@ function hydratePage() {
     throw new Error("Missing app element");
   }
 
+  const { default: Page } = await load();
+
   hydrateRoot(app, <Page {...data.props} />, {
     identifierPrefix: data.identifierPrefix
   });
 }
 
-function hydrateIslands() {
-  for (const root of document.querySelectorAll<HTMLElement>("[data-zen-island-root]")) {
-    const mount = root.querySelector<HTMLElement>("[data-zen-island]");
-    const element = root.querySelector<HTMLScriptElement>("[data-zen-island-props]");
+const hydratedIslands = new WeakSet<HTMLElement>();
 
-    if (!mount || !element || !element.textContent) {
-      throw new Error("Missing Zen island hydration data");
-    }
+async function hydrateIsland(root: HTMLElement) {
+  if (hydratedIslands.has(root)) {
+    return;
+  }
 
-    const data = JSON.parse(element.textContent) as HydrationData;
-    const Island = islands[data.island ?? ""];
+  const mount = root.querySelector<HTMLElement>("[data-zen-island]");
+  const element = root.querySelector<HTMLScriptElement>("[data-zen-island-props]");
 
-    if (!Island) {
-      throw new Error(`Unknown island: ${data.island}`);
-    }
+  if (!mount || !element || !element.textContent) {
+    throw new Error("Missing Zen island hydration data");
+  }
 
-    hydrateRoot(mount, <Island {...data.props} />, {
-      identifierPrefix: data.identifierPrefix
-    });
+  const data = JSON.parse(element.textContent) as HydrationData;
+  const load = islandModules[`../../src/islands/${data.island}.tsx`];
+
+  if (!load) {
+    throw new Error(`Unknown island: ${data.island}`);
+  }
+
+  hydratedIslands.add(root);
+  const { default: Island } = await load();
+
+  hydrateRoot(mount, <Island {...data.props} />, {
+    identifierPrefix: data.identifierPrefix
+  });
+}
+
+function hydrateIslands(root: ParentNode = document) {
+  if (root instanceof HTMLElement && root.matches("[data-zen-island-root]")) {
+    void hydrateIsland(root);
+  }
+
+  for (const island of root.querySelectorAll<HTMLElement>("[data-zen-island-root]")) {
+    void hydrateIsland(island);
   }
 }
 
-hydratePage();
+void hydratePage();
 hydrateIslands();
+
+new MutationObserver((records) => {
+  for (const record of records) {
+    for (const node of record.addedNodes) {
+      if (node instanceof HTMLElement) {
+        hydrateIslands(node);
+      }
+    }
+  }
+}).observe(document.body, { childList: true, subtree: true });

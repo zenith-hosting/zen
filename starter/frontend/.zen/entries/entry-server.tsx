@@ -14,9 +14,14 @@ type RenderRequest = {
   props?: Record<string, unknown>;
 };
 
-const pageModules = import.meta.glob<ComponentModule>("../../src/pages/**/*.tsx", {
-  eager: true
-});
+const pageModules = import.meta.glob<ComponentModule>(
+  [
+    "../../src/pages/**/*.tsx",
+    "!../../src/pages/**/*.test.tsx",
+    "!../../src/pages/**/*.spec.tsx"
+  ],
+  { eager: true }
+);
 
 const pages = Object.fromEntries(
   Object.entries(pageModules).map(([path, mod]) => [
@@ -25,9 +30,14 @@ const pages = Object.fromEntries(
   ])
 );
 
-const islandModules = import.meta.glob<ComponentModule>("../../src/islands/**/*.tsx", {
-  eager: true
-});
+const islandModules = import.meta.glob<ComponentModule>(
+  [
+    "../../src/islands/**/*.tsx",
+    "!../../src/islands/**/*.test.tsx",
+    "!../../src/islands/**/*.spec.tsx"
+  ],
+  { eager: true }
+);
 
 const islands = Object.fromEntries(
   Object.entries(islandModules).map(([path, mod]) => [

@@ -1,120 +1,60 @@
 package zen
 
 import (
-	"fmt"
 	"html"
 	"strings"
 )
 
-const (
-	documentSlotTitle   = "<!--zen:title-->"
-	documentSlotHead    = "<!--zen:head-->"
-	documentSlotBase    = "<!--zen:base-->"
-	documentSlotMeta    = "<!--zen:meta-->"
-	documentSlotLink    = "<!--zen:link-->"
-	documentSlotStyle   = "<!--zen:style-->"
-	documentSlotStyles  = "<!--zen:styles-->"
-	documentSlotScript  = "<!--zen:script-->"
-	documentSlotApp     = "<!--zen:app-->"
-	documentSlotData    = "<!--zen:data-->"
-	documentSlotScripts = "<!--zen:scripts-->"
-)
-
-const defaultDocumentTemplate = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><!--zen:title--></title>
-<!--zen:head-->
-<!--zen:base-->
-<!--zen:meta-->
-<!--zen:link-->
-<!--zen:style-->
-<!--zen:styles-->
-<!--zen:script-->
-</head>
-<body>
-<div id="app"><!--zen:app--></div>
-<!--zen:data-->
-<!--zen:scripts-->
-</body>
-</html>
-`
-
 type documentInput struct {
-	Title         string
-	AppElementID  string
-	DataElementID string
-	Head          string
-	Base          []headElement
-	Meta          []headElement
-	Link          []headElement
-	Script        []headElement
-	Style         string
-	HTML          string
-	HydrationJSON string
-	Styles        []string
-	InlineCSS     string
-	Scripts       []string
-	DevScripts    []string
+	Title            string
+	HeadHTML         string
+	BaseElements     []headElement
+	MetaElements     []headElement
+	LinkElements     []headElement
+	HeadScripts      []headElement
+	CustomCSS        string
+	AppHTML          string
+	HydrationJSON    string
+	StylesheetURLs   []string
+	CompiledCSS      string
+	ModuleScriptURLs []string
 }
 
 type islandFragmentInput struct {
 	Island        string
 	HTML          string
 	HydrationJSON string
-	Styles        []string
-	Scripts       []string
-	DevScripts    []string
 }
 
-func requiredDocumentSlots() []string {
-	return []string{
-		documentSlotTitle,
-		documentSlotHead,
-		documentSlotBase,
-		documentSlotMeta,
-		documentSlotLink,
-		documentSlotStyle,
-		documentSlotStyles,
-		documentSlotScript,
-		documentSlotApp,
-		documentSlotData,
-		documentSlotScripts,
-	}
-}
+func renderDocument(input documentInput) string {
+	var b strings.Builder
 
-func renderDocumentTemplate(template string, input documentInput) (string, error) {
-	for _, slot := range requiredDocumentSlots() {
-		if !strings.Contains(template, slot) {
-			return "", fmt.Errorf("zen: missing required document slot %s", slot)
-		}
+	b.WriteString("<!doctype html>\n<html lang=\"en\">\n<head>\n")
+	b.WriteString("<meta charset=\"utf-8\">\n")
+	b.WriteString("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
+	b.WriteString("<title>")
+	b.WriteString(html.EscapeString(input.Title))
+	b.WriteString("</title>\n")
+	b.WriteString(input.HeadHTML)
+	if input.HeadHTML != "" && !strings.HasSuffix(input.HeadHTML, "\n") {
+		b.WriteByte('\n')
 	}
+	b.WriteString(headElementTags(input.BaseElements))
+	b.WriteString(headElementTags(input.MetaElements))
+	b.WriteString(headElementTags(input.LinkElements))
+	b.WriteString(styleTag(input.CustomCSS))
+	b.WriteString(styleTag(input.CompiledCSS))
+	b.WriteString(stylesheetTags(input.StylesheetURLs))
+	b.WriteString(headElementTags(input.HeadScripts))
+	b.WriteString("</head>\n<body>\n<div id=\"app\">")
+	b.WriteString(input.AppHTML)
+	b.WriteString("</div>\n")
+	b.WriteString(hydrationDataScript(input.HydrationJSON))
+	b.WriteByte('\n')
+	b.WriteString(scriptTags(input.ModuleScriptURLs))
+	b.WriteString("</body>\n</html>\n")
 
-	replacements := map[string]string{
-		documentSlotTitle:   html.EscapeString(input.Title),
-		documentSlotHead:    input.Head,
-		documentSlotBase:    headElementTags(input.Base),
-		documentSlotMeta:    headElementTags(input.Meta),
-		documentSlotLink:    headElementTags(input.Link),
-		documentSlotStyle:   styleTag(input.Style),
-		// InlineCSS (when set) is the build stylesheet emitted inline instead of as a
-		// <link>; reuse styleTag (empty in returns empty out). Raw, like Style: compiled
-		// CSS never contains "</style>" and escaping would corrupt it.
-		documentSlotStyles: styleTag(input.InlineCSS) + stylesheetTags(input.Styles),
-		documentSlotScript:  headElementTags(input.Script),
-		documentSlotApp:     input.HTML,
-		documentSlotData:    hydrationDataScript(input.DataElementID, input.HydrationJSON),
-		documentSlotScripts: scriptTags(append(append([]string{}, input.DevScripts...), input.Scripts...)),
-	}
-
-	out := template
-	for slot, value := range replacements {
-		out = strings.ReplaceAll(out, slot, value)
-	}
-
-	return out, nil
+	return b.String()
 }
 
 func stylesheetTags(styles []string) string {
@@ -141,22 +81,12 @@ func scriptTags(scripts []string) string {
 	return b.String()
 }
 
-func hydrationDataScript(id string, json string) string {
-	var b strings.Builder
-
-	b.WriteString(`<script id="`)
-	b.WriteString(html.EscapeString(id))
-	b.WriteString(`" type="application/json">`)
-	b.WriteString(json)
-	b.WriteString("</script>")
-
-	return b.String()
+func hydrationDataScript(json string) string {
+	return `<script id="__ZEN_DATA__" type="application/json">` + json + "</script>"
 }
 
 func renderIslandFragment(input islandFragmentInput) string {
 	var b strings.Builder
-
-	b.WriteString(stylesheetTags(input.Styles))
 
 	b.WriteString(`<div data-zen-island-root>`)
 	b.WriteString(`<div data-zen-island="`)
@@ -168,9 +98,6 @@ func renderIslandFragment(input islandFragmentInput) string {
 	b.WriteString(input.HydrationJSON)
 	b.WriteString("</script>")
 	b.WriteString("</div>\n")
-
-	b.WriteString(scriptTags(input.DevScripts))
-	b.WriteString(scriptTags(input.Scripts))
 
 	return b.String()
 }

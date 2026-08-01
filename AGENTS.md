@@ -31,7 +31,7 @@ Browser
   -> renderer.RenderPage(ctx, url, "Page", props)
   -> HTTP call to Node renderer
   -> Vite/React SSR
-  -> Zen injects SSR output into frontend/index.html
+  -> Zen assembles the HTML document in Go
   -> Zen returns status, content type, and body
   -> framework writes the response
   -> browser hydrates React page
@@ -262,53 +262,9 @@ starter/frontend/.zen/
 
 ---
 
-## HTML Document Template Rules
+## HTML Document Rules
 
-Full-page responses are assembled from the developer-owned frontend document template:
-
-```text
-frontend/index.html
-```
-
-`Config.DocumentPath` defaults to:
-
-```text
-<ProjectRoot>/<frontendDir>/index.html
-```
-
-where `frontendDir` comes from `zen.config.json` and defaults to `frontend`.
-
-The Go renderer reads this template for `RenderPage`, replaces Zen slots, and returns the final HTML response data. Keep this as simple string slot replacement. Do not introduce an HTML parser, metadata DSL, layout system, Vite `transformIndexHtml`, or a Next-style document API unless explicitly requested and carefully justified.
-
-Required template slots:
-
-```html
-<!--zen:title-->
-<!--zen:head-->
-<!--zen:base-->
-<!--zen:meta-->
-<!--zen:link-->
-<!--zen:style-->
-<!--zen:styles-->
-<!--zen:script-->
-<!--zen:app-->
-<!--zen:data-->
-<!--zen:scripts-->
-```
-
-Slot meanings:
-
-* `<!--zen:title-->`: escaped page title from `WithTitle` or `Config.DefaultTitle`
-* `<!--zen:head-->`: raw `head` returned by the Node renderer
-* `<!--zen:base-->`: Go-generated `<base>` tags from `WithBase` / `Base`
-* `<!--zen:meta-->`: Go-generated `<meta>` tags from `WithMeta` / `Meta`
-* `<!--zen:link-->`: Go-generated `<link>` tags from `WithLink` / `Link`
-* `<!--zen:style-->`: Go-generated `<style>` tag from `WithStyle` / `Style`
-* `<!--zen:styles-->`: production CSS links from the Vite manifest
-* `<!--zen:script-->`: Go-generated `<script>` tags from `WithScript` / `Script`
-* `<!--zen:app-->`: raw React SSR HTML
-* `<!--zen:data-->`: Go-generated safe hydration JSON script using `Config.DataElementID`
-* `<!--zen:scripts-->`: Vite dev scripts or production client entry scripts
+`RenderPage` assembles the complete HTML document directly in `document.go`. There is no `frontend/index.html` or configurable document template. Keep the document shell hardcoded and boring; do not introduce an HTML parser, metadata DSL, layout system, Vite `transformIndexHtml`, or a Next-style document API unless explicitly requested and carefully justified.
 
 Go-owned head elements should use the structured render options:
 
@@ -325,12 +281,11 @@ renderer.RenderPage(ctx, url, "Home", props,
 
 Attribute values are escaped by Zen. Use `Attr(name, value)` for less-common attributes; unsafe attribute names are skipped. `Text` is raw element text for scripts, and `WithStyle` takes raw CSS directly as a string.
 
-The starter should keep this shape:
+The hardcoded document contains:
 
 ```html
-<div id="app"><!--zen:app--></div>
-<!--zen:data-->
-<!--zen:scripts-->
+<div id="app">...</div>
+<script id="__ZEN_DATA__" type="application/json">...</script>
 ```
 
 The current frontend hydration entry looks for:
@@ -340,11 +295,11 @@ document.getElementById("app")
 document.getElementById("__ZEN_DATA__")
 ```
 
-Do not change the template IDs without also changing the hydration entry and tests.
+Do not change these IDs without also changing the hydration entry and tests.
 
-`RenderIsland` is intentionally separate. It returns a hydratable fragment from `renderIslandFragment`; it should not read or inject `frontend/index.html`.
+`RenderIsland` is intentionally separate. It returns a hydratable fragment from `renderIslandFragment` and never assembles a full document.
 
-When changing document template behavior, update:
+When changing document behavior, update:
 
 ```text
 document.go
@@ -352,7 +307,6 @@ document_test.go
 head.go
 render.go
 render_test.go
-starter/frontend/index.html
 ```
 
 ---
@@ -592,7 +546,7 @@ curl -i http://127.0.0.1:3000/
 
 In dev output, the HTML should include Vite client scripts.
 
-The response should preserve the surrounding `frontend/index.html` template shell and include SSR HTML in `<!--zen:app-->`.
+The response should include the hardcoded document shell and SSR HTML inside `<div id="app">`.
 
 In production output, the HTML should not include:
 

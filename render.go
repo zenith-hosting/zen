@@ -135,64 +135,37 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 	// Inline the compiled CSS into a <style> instead of a <link> when asked (prod
 	// only) — reads the same manifest-resolved files zen would otherwise link, so
 	// there's no extra render-blocking CSS request on the critical path.
-	var inlineCSS string
+	var compiledCSS string
 	if opts.InlineStyles && !r.config.Dev {
-		inlineCSS, err = r.readStyles(assets.Styles)
+		compiledCSS, err = r.readStyles(assets.Styles)
 		if err != nil {
 			return Response{}, err
 		}
 		assets.Styles = nil
 	}
 
-	template, err := r.documentTemplate()
-	if err != nil {
-		return Response{}, err
-	}
+	moduleScriptURLs := append(devScripts, assets.Scripts...)
 
-	doc, err := renderDocumentTemplate(template, documentInput{
-		Title:         opts.Title,
-		Head:          res.Head,
-		Base:          opts.Base,
-		Meta:          opts.Meta,
-		Link:          opts.Link,
-		Script:        opts.Script,
-		Style:         opts.Style,
-		DataElementID: r.config.DataElementID,
-		HTML:          res.HTML,
-		HydrationJSON: hydrationJSON,
-		Styles:        assets.Styles,
-		InlineCSS:     inlineCSS,
-		Scripts:       assets.Scripts,
-		DevScripts:    devScripts,
+	doc := renderDocument(documentInput{
+		Title:            opts.Title,
+		HeadHTML:         res.Head,
+		BaseElements:     opts.Base,
+		MetaElements:     opts.Meta,
+		LinkElements:     opts.Link,
+		HeadScripts:      opts.Script,
+		CustomCSS:        opts.Style,
+		AppHTML:          res.HTML,
+		HydrationJSON:    hydrationJSON,
+		StylesheetURLs:   assets.Styles,
+		CompiledCSS:      compiledCSS,
+		ModuleScriptURLs: moduleScriptURLs,
 	})
-	if err != nil {
-		if strings.TrimSpace(r.config.DocumentPath) == "" {
-			return Response{}, err
-		}
-		return Response{}, fmt.Errorf("zen: invalid document template %s: %w", r.config.DocumentPath, err)
-	}
 
 	return Response{
 		Status:      opts.Status,
 		ContentType: htmlContentType,
 		Body:        []byte(doc),
 	}, nil
-}
-
-func (r *Renderer) documentTemplate() (string, error) {
-	if strings.TrimSpace(r.config.DocumentPath) == "" {
-		return defaultDocumentTemplate, nil
-	}
-
-	raw, err := os.ReadFile(r.config.DocumentPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("zen: missing document template %s; restore it or set Config.DocumentPath", r.config.DocumentPath)
-		}
-		return "", fmt.Errorf("zen: read document template %s: %w", r.config.DocumentPath, err)
-	}
-
-	return string(raw), nil
 }
 
 func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props any, options ...RenderOption) (Response, error) {
@@ -233,18 +206,10 @@ func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props a
 		return Response{}, err
 	}
 
-	assets, devScripts, err := r.clientEntryAssets()
-	if err != nil {
-		return Response{}, err
-	}
-
 	fragment := renderIslandFragment(islandFragmentInput{
 		Island:        island,
 		HTML:          res.HTML,
 		HydrationJSON: hydrationJSON,
-		Styles:        assets.Styles,
-		Scripts:       assets.Scripts,
-		DevScripts:    devScripts,
 	})
 
 	return Response{
@@ -258,6 +223,7 @@ func (r *Renderer) clientEntryAssets() (clientAssets, []string, error) {
 	if r.config.Dev {
 		return clientAssets{}, []string{
 			r.config.viteURL + "/@vite/client",
+			r.config.viteURL + "/.zen/entries/react-refresh.mjs",
 			r.config.viteURL + "/.zen/entries/entry-client.tsx",
 		}, nil
 	}

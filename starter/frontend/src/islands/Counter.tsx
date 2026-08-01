@@ -9,7 +9,7 @@ export default function Counter(props: CounterProps) {
 
   return (
     <button
-      className="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
+      className="shrink-0 rounded-xl bg-indigo-400 px-4 py-3 text-sm font-semibold text-indigo-950 transition hover:bg-indigo-300"
       type="button"
       onClick={() => setCount((current) => current + 1)}
     >

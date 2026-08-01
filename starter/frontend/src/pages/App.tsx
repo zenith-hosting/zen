@@ -1,8 +1,9 @@
 import Home from "./Home";
-import User from "./User";
 
 type AppProps = {
   url?: string;
+  counter?: string;
+  user?: string;
 };
 
 function NotFound() {
@@ -26,12 +27,11 @@ function NotFound() {
 }
 
 export default function App(props: AppProps) {
-  const pathname = new URL(props.url ?? "/", "http://zen.local").pathname;
+  const url = new URL(props.url ?? "/", "http://zen.local");
 
-  if (pathname === "/") {
-    return <Home />;
+  if (url.pathname === "/") {
+    return <Home counter={props.counter} user={props.user} />;
   }
 
-  const user = pathname.match(/^\/users\/([^/]+)\/?$/);
-  return user ? <User id={user[1]} /> : <NotFound />;
+  return <NotFound />;
 }

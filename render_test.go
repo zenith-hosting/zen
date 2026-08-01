@@ -69,11 +69,9 @@ func TestRenderReturnsSSRDocument(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 	}
@@ -112,11 +110,9 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 	}
@@ -145,32 +141,7 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 	}
 }
 
-func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
-	dir := t.TempDir()
-	documentPath := filepath.Join(dir, "index.html")
-	template := `<!doctype html>
-<html lang="en">
-<head>
-<title><!--zen:title--></title>
-<!--zen:head-->
-<!--zen:base-->
-<!--zen:meta-->
-<!--zen:link-->
-<!--zen:style-->
-<!--zen:styles-->
-<!--zen:script-->
-</head>
-<body class="custom-shell">
-<div id="app"><!--zen:app--></div>
-<!--zen:data-->
-<!--zen:scripts-->
-</body>
-</html>`
-
-	if err := os.WriteFile(documentPath, []byte(template), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
+func TestRenderPageUsesHardcodedDocument(t *testing.T) {
 	client := &fakeSSRClient{
 		res: ssrResponse{
 			HTML: `<main><h1>Hello</h1></main>`,
@@ -180,11 +151,9 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			DocumentPath:  documentPath,
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 	}
@@ -204,7 +173,7 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 		t.Fatalf("expected status 201, got %d", res.Status)
 	}
 	for _, want := range []string{
-		`<body class="custom-shell">`,
+		`<body>`,
 		`<title>Custom &lt;Title&gt;</title>`,
 		`<meta name="description" content="From renderer">`,
 		`<base href="/">`,
@@ -214,30 +183,12 @@ func TestRenderPageUsesConfiguredDocumentTemplate(t *testing.T) {
 		`<script type="application/ld+json">{"name":"Home"}</script>`,
 		`<div id="app"><main><h1>Hello</h1></main></div>`,
 		`http://localhost:5173/@vite/client`,
+		`http://localhost:5173/.zen/entries/react-refresh.mjs`,
 		`http://localhost:5173/.zen/entries/entry-client.tsx`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("body missing %q\n%s", want, body)
 		}
-	}
-}
-
-func TestRendererDocumentTemplateReportsMissingFile(t *testing.T) {
-	r := &Renderer{
-		config: Config{
-			DocumentPath: filepath.Join(t.TempDir(), "missing.html"),
-		},
-	}
-
-	_, err := r.documentTemplate()
-	if err == nil {
-		t.Fatal("expected missing document template error")
-	}
-	if !strings.Contains(err.Error(), "zen: missing document template") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(err.Error(), "restore it or set Config.DocumentPath") {
-		t.Fatalf("missing actionable recovery: %v", err)
 	}
 }
 
@@ -250,11 +201,9 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 	}
@@ -276,11 +225,14 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 		`<button>Count 0</button>`,
 		`"island":"Counter"`,
 		`"props":{"count":0}`,
-		`http://localhost:5173/@vite/client`,
-		`http://localhost:5173/.zen/entries/entry-client.tsx`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("island fragment missing %q\n%s", want, body)
+		}
+	}
+	for _, unwanted := range []string{"<link", `<script type="module"`} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("island fragment includes page asset %q\n%s", unwanted, body)
 		}
 	}
 	if client.req.Mode != "island" {
@@ -315,10 +267,8 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           false,
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          false,
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 		manifest: viteManifest{
@@ -345,7 +295,7 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 	}
 }
 
-func TestRenderIslandInjectsProductionManifestAssets(t *testing.T) {
+func TestRenderIslandDoesNotInjectProductionManifestAssets(t *testing.T) {
 	client := &fakeSSRClient{
 		res: ssrResponse{
 			HTML: `<button>Count 0</button>`,
@@ -354,18 +304,10 @@ func TestRenderIslandInjectsProductionManifestAssets(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           false,
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          false,
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
-		manifest: viteManifest{
-			".zen/entries/entry-client.tsx": {
-				File: "assets/entry-client.abc123.js",
-				CSS:  []string{"assets/app.def456.css"},
-			},
-		},
 	}
 
 	res := mustRenderIsland(t, r, "/counter", "Counter", map[string]int{
@@ -373,14 +315,8 @@ func TestRenderIslandInjectsProductionManifestAssets(t *testing.T) {
 	})
 	body := string(res.Body)
 
-	if !strings.Contains(body, `<link rel="stylesheet" href="/assets/app.def456.css">`) {
-		t.Fatalf("body missing production css: %s", body)
-	}
-	if !strings.Contains(body, `<script type="module" src="/assets/entry-client.abc123.js"></script>`) {
-		t.Fatalf("body missing production script: %s", body)
-	}
-	if strings.Contains(body, "/@vite/client") {
-		t.Fatalf("production body should not include vite dev client: %s", body)
+	if strings.Contains(body, "<link") || strings.Contains(body, `<script type="module"`) {
+		t.Fatalf("island fragment should not include page assets: %s", body)
 	}
 }
 
@@ -414,11 +350,9 @@ func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: nil,
 	}
@@ -444,12 +378,10 @@ func TestRenderReturnsRendererHTTPError(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			renderURL:     server.URL,
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			renderURL:    server.URL,
+			DefaultTitle: "Zen",
 		},
 		ssr: newHTTPSSRClient(httpSSRClientConfig{
 			RenderURL: server.URL,
@@ -482,11 +414,9 @@ func TestRenderInlineStylesEmitsStyleTagInsteadOfLink(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           false,
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
-			clientDist:    dir,
+			Dev:          false,
+			DefaultTitle: "Zen",
+			clientDist:   dir,
 		},
 		ssr: client,
 		manifest: viteManifest{
@@ -519,11 +449,9 @@ func TestRenderInlineStylesIgnoredInDev(t *testing.T) {
 
 	r := &Renderer{
 		config: Config{
-			Dev:           true,
-			viteURL:       "http://localhost:5173",
-			AppElementID:  "app",
-			DataElementID: "__ZEN_DATA__",
-			DefaultTitle:  "Zen",
+			Dev:          true,
+			viteURL:      "http://localhost:5173",
+			DefaultTitle: "Zen",
 		},
 		ssr: client,
 	}

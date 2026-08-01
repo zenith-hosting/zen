@@ -5,44 +5,20 @@ import (
 	"testing"
 )
 
-func TestRenderDocumentTemplateInjectsSlots(t *testing.T) {
-	template := `<!doctype html>
-<html lang="en">
-<head>
-<title><!--zen:title--></title>
-<!--zen:head-->
-<!--zen:base-->
-<!--zen:meta-->
-<!--zen:link-->
-<!--zen:style-->
-<!--zen:styles-->
-<!--zen:script-->
-</head>
-<body class="font-sans">
-<div id="app"><!--zen:app--></div>
-<!--zen:data-->
-<!--zen:scripts-->
-</body>
-</html>`
-
-	doc, err := renderDocumentTemplate(template, documentInput{
-		Title:         "Home <unsafe>",
-		Head:          `<meta name="description" content="Hello">`,
-		Base:          []headElement{newHeadElement("base", Href("/"))},
-		Meta:          []headElement{newHeadElement("meta", Property("og:title"), Content("Home <unsafe>"))},
-		Link:          []headElement{newHeadElement("link", Rel("canonical"), Href("https://example.com/?q=<unsafe>"))},
-		Style:         `body { color: red; }`,
-		Script:        []headElement{newHeadElement("script", Type("application/ld+json"), Text(`{"name":"Home"}`))},
-		DataElementID: "__ZEN_DATA__",
-		HTML:          `<main><h1>Hello</h1></main>`,
-		HydrationJSON: `{"page":"Home","props":{"title":"Hello"}}`,
-		Styles:        []string{"/assets/app.css"},
-		Scripts:       []string{"/assets/entry-client.js"},
-		DevScripts:    []string{"http://localhost:5173/@vite/client"},
+func TestRenderDocument(t *testing.T) {
+	doc := renderDocument(documentInput{
+		Title:            "Home <unsafe>",
+		HeadHTML:         `<meta name="description" content="Hello">`,
+		BaseElements:     []headElement{newHeadElement("base", Href("/"))},
+		MetaElements:     []headElement{newHeadElement("meta", Property("og:title"), Content("Home <unsafe>"))},
+		LinkElements:     []headElement{newHeadElement("link", Rel("canonical"), Href("https://example.com/?q=<unsafe>"))},
+		HeadScripts:      []headElement{newHeadElement("script", Type("application/ld+json"), Text(`{"name":"Home"}`))},
+		CustomCSS:        `body { color: red; }`,
+		AppHTML:          `<main><h1>Hello</h1></main>`,
+		HydrationJSON:    `{"page":"Home","props":{"title":"Hello"}}`,
+		StylesheetURLs:   []string{"/assets/app.css"},
+		ModuleScriptURLs: []string{"http://localhost:5173/@vite/client", "/assets/entry-client.js"},
 	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
 
 	for _, want := range []string{
 		`<title>Home &lt;unsafe&gt;</title>`,
@@ -57,29 +33,11 @@ func TestRenderDocumentTemplateInjectsSlots(t *testing.T) {
 		`<script id="__ZEN_DATA__" type="application/json">{"page":"Home","props":{"title":"Hello"}}</script>`,
 		`<script type="module" src="http://localhost:5173/@vite/client"></script>`,
 		`<script type="module" src="/assets/entry-client.js"></script>`,
-		`<body class="font-sans">`,
+		`<body>`,
 	} {
 		if !strings.Contains(doc, want) {
 			t.Fatalf("document missing %q\n%s", want, doc)
 		}
-	}
-}
-
-func TestRenderDocumentTemplateRequiresSlots(t *testing.T) {
-	template := `<!doctype html><html><body><!--zen:app--></body></html>`
-
-	_, err := renderDocumentTemplate(template, documentInput{
-		Title:         "Home",
-		DataElementID: "__ZEN_DATA__",
-		HTML:          `<main></main>`,
-		HydrationJSON: `{}`,
-	})
-	if err == nil {
-		t.Fatal("expected missing slot error")
-	}
-
-	if !strings.Contains(err.Error(), `missing required document slot <!--zen:title-->`) {
-		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -97,13 +55,5 @@ func TestHeadElementTagsEscapesAttributesAndSkipsUnsafeNames(t *testing.T) {
 	}
 	if strings.Contains(html, "bad name") {
 		t.Fatalf("unsafe attribute name should be skipped: %s", html)
-	}
-}
-
-func TestDefaultDocumentTemplateContainsRequiredSlots(t *testing.T) {
-	for _, slot := range requiredDocumentSlots() {
-		if !strings.Contains(defaultDocumentTemplate, slot) {
-			t.Fatalf("default template missing slot %s", slot)
-		}
 	}
 }

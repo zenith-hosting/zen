@@ -95,7 +95,7 @@ GET  /__zen/health
 
 If the app does not run from the project root, set `ProjectRoot` in `zen.Config` so Zen can find `zen.config.json`.
 
-Custom head elements are built from escaped attributes and injected into the matching slots in `frontend/index.html`:
+Zen builds the HTML document in Go. Custom head elements use escaped attributes:
 
 ```go
 response, err := renderer.RenderPage(ctx, url, "Home", props,

@@ -39,3 +39,5 @@ require (
 )
 
 tool github.com/air-verse/air
+
+replace github.com/zenith-hositng/zen => ../
