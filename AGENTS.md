@@ -28,21 +28,22 @@ A Zen app works like this:
 Browser
   -> Go HTTP app
   -> normal framework route handler
-  -> renderer.RenderPage(ctx, url, "Page", props)
+  -> renderer.RenderPage(...) or renderer.RenderIsland(...)
   -> HTTP call to Node renderer
   -> Vite/React SSR
-  -> Zen assembles the HTML document in Go
+  -> Zen assembles a complete page or hydratable island fragment in Go
   -> Zen returns status, content type, and body
   -> framework writes the response
-  -> browser hydrates React page
+  -> browser hydrates the React page and each island as independent roots
 ```
 
 Development mode:
 
 ```text
 pnpm dev
-  -> starts dev renderer
-  -> starts Go app through Air
+  -> starts Vite dev renderer on 5173
+  -> starts Go app through Air on 30001
+  -> Air proxies localhost:3000 to the Go app
 ```
 
 Production mode:
@@ -54,8 +55,8 @@ pnpm build
   -> builds Go binary
 
 pnpm start
-  -> starts production renderer
-  -> starts compiled Go binary with ZEN_ENV=prod
+  -> starts production renderer on 4174
+  -> starts compiled Go binary on 3000 with ZEN_ENV=prod
 ```
 
 The renderer bridge uses HTTP. Do not reintroduce stdin/stdout process communication.
@@ -68,6 +69,13 @@ Run all Go tests:
 
 ```bash
 go test ./...
+```
+
+Check and build the starter frontend:
+
+```bash
+pnpm --dir starter/frontend exec tsc --noEmit
+pnpm --dir starter/frontend build
 ```
 
 Run the starter app in development:
@@ -112,6 +120,7 @@ Expected high-level structure:
   render.go
   document.go
   escape.go
+  head.go
   manifest.go
   assets.go
   ssr_client.go
@@ -126,11 +135,14 @@ starter/
       entries/
         entry-client.tsx
         entry-server.tsx
+        react-refresh.mjs
       renderers/
         renderer-shared.mjs
         dev-renderer.mjs
         prod-renderer.mjs
     src/
+      pages/
+      islands/
 
 ```
 
@@ -140,7 +152,7 @@ The root Go module is:
 github.com/zenith-hosting/zen
 ```
 
-The starter defines the workflow directly in `package.json` scripts invoked through `pnpm tidy`, `pnpm dev`, `pnpm build`, and `pnpm start`. Zen does not need a general-purpose CLI or process manager.
+The starter defines the workflow directly in `package.json` scripts invoked through `pnpm tidy`, `pnpm dev`, `pnpm build`, and `pnpm start`. There is no Zen CLI, `js/` source mirror, or examples directory.
 
 ---
 
@@ -224,7 +236,7 @@ The `pnpm dev` package script should be the only workflow that starts Air.
 
 ## Renderer Runtime Rules
 
-The renderer files must be available to initialized projects.
+The renderer files are application-owned runtime files copied from the starter.
 
 Renderer runtime files should live under the frontend package:
 
@@ -234,10 +246,11 @@ frontend/.zen/renderers/dev-renderer.mjs
 frontend/.zen/renderers/prod-renderer.mjs
 ```
 
-The renderer process must run with:
+The renderer processes must run from the frontend directory:
 
-```text
-Dir: cfg.FrontendDir
+```bash
+cd frontend
+node .zen/renderers/dev-renderer.mjs
 ```
 
 This matters because Vite is installed in:
@@ -254,11 +267,23 @@ import { createServer as createViteServer } from "vite";
 
 Do not move renderer runtime files back to root `.zen/renderers` unless dependency resolution is redesigned.
 
-Renderer and entry sources live in:
+Canonical renderer and entry sources live only in:
 
 ```text
 starter/frontend/.zen/
 ```
+
+Do not recreate a second source-of-truth directory or synchronization script.
+
+---
+
+## Frontend Entry Rules
+
+The server entry eagerly imports all page and island modules because the SSR bundle runs on the server. The client entry uses lazy `import.meta.glob` loaders so each page and island can become a separate Vite chunk.
+
+Both globs include nested `.tsx` files and exclude `*.test.tsx` and `*.spec.tsx`. Keep those negative patterns when changing discovery.
+
+The client entry hydrates the page once, hydrates every island as an independent React root, and observes inserted DOM so fetched island fragments hydrate without a reload. Each island instance needs a unique React `identifierPrefix`; the server-generated value must be reused by `hydrateRoot`.
 
 ---
 
@@ -299,6 +324,8 @@ Do not change these IDs without also changing the hydration entry and tests.
 
 `RenderIsland` is intentionally separate. It returns a hydratable fragment from `renderIslandFragment` and never assembles a full document.
 
+`WithInlineStyles` is production-only. It reads the manifest-resolved compiled CSS and emits it in a `<style>` element instead of stylesheet links. Development CSS remains owned by Vite.
+
 When changing document behavior, update:
 
 ```text
@@ -331,13 +358,17 @@ Render request:
 
 ```json
 {
+  "mode": "page",
   "url": "/users/42",
   "page": "User",
+  "identifierPrefix": "zen-page-",
   "props": {
     "id": "42"
   }
 }
 ```
+
+Island requests use `"mode": "island"` and `"island": "Counter"`. Each island instance receives a unique `identifierPrefix`; the same value is included in its hydration data so React's server and client IDs match.
 
 Successful response:
 
@@ -348,7 +379,7 @@ Successful response:
 }
 ```
 
-The HTTP protocol stops here. The Node renderer returns fragments and optional head HTML; Go owns template slot injection and the final full document response.
+The HTTP protocol stops here. The Node renderer returns React HTML and optional head HTML; Go owns final document assembly and island wrappers.
 
 Error response:
 
@@ -378,6 +409,8 @@ pnpm start
 
 There is no init command. New projects come from the starter repository.
 
+`FrontendDir`, `DevRendererPort`, and `ProdRendererPort` are public `zen.Config` fields, defaulting to `frontend`, `5173`, and `4174`. There is no separate project config file. If an app changes those values, its package scripts must use the matching working directory or renderer `--port` arguments.
+
 `pnpm tidy` runs `go mod tidy` and `pnpm --dir frontend install` in order.
 
 `pnpm dev` starts the development renderer from `frontend/` and the Go app through Air with `ZEN_ENV=dev`. Tailwind is handled by the existing Vite plugin; do not add a separate Tailwind watcher.
@@ -403,10 +436,7 @@ Cannot find package vite
 Good:
 
 ```text
-zen: missing frontend dependencies.
-
-Run:
-  pnpm --dir frontend install
+zen: missing frontend dependencies; run: pnpm tidy
 ```
 
 Bad:
@@ -418,10 +448,7 @@ open frontend/dist/server/entry-server.js: no such file or directory
 Good:
 
 ```text
-zen: missing production artifact frontend/dist/server/entry-server.js.
-
-Run:
-  pnpm build
+zen: missing production artifacts; run: pnpm build
 ```
 
 Bad:
@@ -446,6 +473,13 @@ For Go:
 
 ```bash
 go test ./...
+```
+
+For starter frontend changes:
+
+```bash
+pnpm --dir starter/frontend exec tsc --noEmit
+pnpm --dir starter/frontend build
 ```
 
 Avoid tests that require starting long-running processes unless the behavior cannot be tested another way.
@@ -478,12 +512,13 @@ Adding a dependency is allowed when it removes meaningful maintenance burden.
 
 Adding a dependency is not allowed when it mostly creates a new abstraction developers have to understand.
 
-Acceptable starter dependencies so far:
+The current dependency boundary is:
 
-* Air
-* Vite
-* React
-* Tailwind
+* The root Zen Go module uses only the standard library.
+* The starter uses net/http and Air on the Go side.
+* The frontend uses Vite, React/ReactDOM, Tailwind, and TypeScript tooling.
+
+The repository does not pin a pnpm major version. Do not add a pin without a demonstrated compatibility requirement.
 
 Be cautious with protocol libraries, RPC frameworks, process managers, and anything that makes debugging less obvious.
 
@@ -519,6 +554,8 @@ Run:
 
 ```bash
 go test ./...
+pnpm --dir starter/frontend exec tsc --noEmit
+pnpm --dir starter/frontend build
 ```
 
 When changing the starter, validate:

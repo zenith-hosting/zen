@@ -1,6 +1,6 @@
 # Zen
 
-Zen is tiny glue for building server-rendered Go apps with any Go HTTP framework, Vite, React, Tailwind, and Air.
+Zen is tiny glue for building server-rendered Go apps with any Go HTTP framework, Vite, React, Tailwind, and Air. The library itself uses only the Go standard library.
 
 It does not replace those tools. It keeps your HTTP framework in charge of requests and responses, Vite in charge of frontend builds and dev behavior, React in charge of components and hydration, Tailwind in charge of styling, and Air in charge of Go hot reload.
 
@@ -43,29 +43,33 @@ import (
 func main() {
 	dev := os.Getenv("ZEN_ENV") != "prod"
 	renderer, err := zen.New(zen.Config{
-		Dev:           dev,
-		DefaultTitle:  "Zen App",
-		RenderTimeout: 5 * time.Second,
+		Dev:              dev,
+		FrontendDir:      "frontend",
+		DevRendererPort:  5173,
+		ProdRendererPort: 4174,
+		DefaultTitle:     "Zen App",
+		RenderTimeout:    5 * time.Second,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer renderer.Close()
 
+	mux := http.NewServeMux()
 	if !dev {
-		http.Handle("/assets/", http.StripPrefix(
+		mux.Handle("/assets/", http.StripPrefix(
 			"/assets/",
 			http.FileServer(http.Dir(renderer.AssetsDir())),
 		))
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, request *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, request *http.Request) {
 		response, err := renderer.RenderPage(
 			request.Context(),
 			request.URL.RequestURI(),
-			"Home",
+			"App",
 			map[string]any{
-			"title": "Zen App",
+				"url": request.URL.RequestURI(),
 			},
 			zen.WithTitle("Home"),
 			zen.WithMeta(zen.Name("description"), zen.Content("Zen app home page")),
@@ -80,20 +84,22 @@ func main() {
 		_, _ = w.Write(response.Body)
 	})
 
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	log.Fatal(http.ListenAndServe(":3000", mux))
 }
 ```
 
 Chi uses the same `net/http` handler shape. Gin and Fiber handlers pass their request context and original URL to Zen, then write `Response.Status`, `Response.ContentType`, and `Response.Body` with their native APIs.
 
-The Go app reads renderer ports and frontend paths from `zen.config.json`, then calls the Node renderer over HTTP:
+The Go app calls the Node renderer over HTTP:
 
 ```text
 POST /__zen/render
 GET  /__zen/health
 ```
 
-If the app does not run from the project root, set `ProjectRoot` in `zen.Config` so Zen can find `zen.config.json`.
+`FrontendDir`, `DevRendererPort`, and `ProdRendererPort` default to the values shown in the example. The package scripts use those defaults directly; if you change one in `zen.Config`, update the corresponding `cd` or renderer `--port` argument in `package.json` too.
+
+If the app does not run from the project root, set `ProjectRoot` in `zen.Config` so Zen can resolve frontend build paths.
 
 Zen builds the HTML document in Go. Custom head elements use escaped attributes:
 
@@ -109,6 +115,14 @@ response, err := renderer.RenderPage(ctx, url, "Home", props,
 
 Short aliases such as `zen.Base(...)`, `zen.Meta(...)`, and `zen.Link(...)` are also available.
 
+`RenderIsland` returns an SSR fragment that the client entry hydrates as an independent React root. Islands can be included in the initial page props or fetched and inserted later; a `MutationObserver` hydrates newly inserted fragments.
+
+```go
+counter, err := renderer.RenderIsland(ctx, url, "Counter", map[string]any{"count": 0})
+```
+
+In production, Zen reads client scripts and styles from Vite's manifest. Serve `renderer.AssetsDir()` at `/assets/`. Pass `zen.WithInlineStyles()` to `RenderPage` only when you deliberately want the compiled CSS embedded in the document instead of linked.
+
 ## Project workflow
 
 ```bash
@@ -118,7 +132,12 @@ pnpm build
 pnpm start
 ```
 
-These commands are ordinary `package.json` scripts. Tidy updates Go modules and installs frontend dependencies. Development starts the Vite/React renderer and Air, with Tailwind handled by Vite. Build creates the frontend bundles and `./bin/app`. Start runs those existing production artifacts and never builds.
+These commands are ordinary `package.json` scripts:
+
+* `tidy` runs `go mod tidy` and installs frontend dependencies.
+* `dev` starts the Vite/React renderer on port `5173` and Air; Air proxies `localhost:3000` to the Go app on `30001`.
+* `build` creates the client bundle, SSR bundle, Vite manifest, and `./bin/app`.
+* `start` checks those production artifacts, then starts the renderer on `4174` and the Go app on `3000`. It never builds.
 
 ## Repository
 
@@ -128,7 +147,7 @@ This repository contains the Zen library module:
 github.com/zenith-hosting/zen
 ```
 
-Canonical frontend runtime sources are in `starter/frontend/.zen`.
+Canonical frontend runtime sources are in `starter/frontend/.zen`; there are no separate CLI, examples, or JavaScript source copies elsewhere in this repository.
 
 ## Development
 
@@ -136,4 +155,6 @@ Run the main checks:
 
 ```bash
 go test ./...
+pnpm --dir starter/frontend exec tsc --noEmit
+pnpm --dir starter/frontend build
 ```

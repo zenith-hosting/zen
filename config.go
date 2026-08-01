@@ -1,9 +1,7 @@
 package zen
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -15,77 +13,37 @@ type Config struct {
 
 	RenderTimeout time.Duration
 
-	ProjectRoot  string
-	DefaultTitle string
+	ProjectRoot      string
+	FrontendDir      string
+	DevRendererPort  int
+	ProdRendererPort int
+	DefaultTitle     string
 
-	viteURL       string
-	renderURL     string
-	clientDist    string
-	manifest      string
-	configLoadErr error
-}
-
-type projectConfig struct {
-	FrontendDir      string `json:"frontendDir"`
-	DevRendererPort  int    `json:"devRendererPort"`
-	ProdRendererPort int    `json:"prodRendererPort"`
-}
-
-func defaultProjectConfig() projectConfig {
-	return projectConfig{
-		FrontendDir:      "frontend",
-		DevRendererPort:  5173,
-		ProdRendererPort: 4174,
-	}
-}
-
-func loadProjectConfig(root string) (projectConfig, error) {
-	cfg := defaultProjectConfig()
-	path := filepath.Join(root, "zen.config.json")
-
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return cfg, nil
-		}
-		return projectConfig{}, err
-	}
-
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return projectConfig{}, err
-	}
-
-	if cfg.FrontendDir == "" {
-		cfg.FrontendDir = "frontend"
-	}
-	if cfg.DevRendererPort == 0 {
-		cfg.DevRendererPort = 5173
-	}
-	if cfg.ProdRendererPort == 0 {
-		cfg.ProdRendererPort = 4174
-	}
-
-	return cfg, nil
+	viteURL    string
+	renderURL  string
+	clientDist string
+	manifest   string
 }
 
 func (c Config) withDefaults() Config {
-	root := c.ProjectRoot
-	if root == "" {
-		root = "."
+	if c.ProjectRoot == "" {
+		c.ProjectRoot = "."
 	}
-	c.ProjectRoot = root
-
-	project, err := loadProjectConfig(root)
-	if err != nil {
-		c.configLoadErr = err
-		project = defaultProjectConfig()
+	if c.FrontendDir == "" {
+		c.FrontendDir = "frontend"
+	}
+	if c.DevRendererPort == 0 {
+		c.DevRendererPort = 5173
+	}
+	if c.ProdRendererPort == 0 {
+		c.ProdRendererPort = 4174
 	}
 
-	frontendDir := filepath.Join(root, project.FrontendDir)
+	frontendDir := filepath.Join(c.ProjectRoot, c.FrontendDir)
 
 	if c.Dev {
 		if c.viteURL == "" {
-			c.viteURL = "http://localhost:" + intString(project.DevRendererPort)
+			c.viteURL = "http://localhost:" + intString(c.DevRendererPort)
 		}
 		if c.renderURL == "" {
 			c.renderURL = strings.TrimRight(c.viteURL, "/") + "/__zen/render"
@@ -95,7 +53,7 @@ func (c Config) withDefaults() Config {
 		}
 	} else {
 		if c.renderURL == "" {
-			c.renderURL = "http://127.0.0.1:" + intString(project.ProdRendererPort) + "/__zen/render"
+			c.renderURL = "http://127.0.0.1:" + intString(c.ProdRendererPort) + "/__zen/render"
 		}
 		if c.clientDist == "" {
 			c.clientDist = filepath.Join(frontendDir, "dist", "client")
@@ -113,10 +71,6 @@ func (c Config) withDefaults() Config {
 }
 
 func (c Config) validate() error {
-	if c.configLoadErr != nil {
-		return c.configLoadErr
-	}
-
 	if strings.TrimSpace(c.renderURL) == "" {
 		return errors.New("zen: RenderURL is required")
 	}

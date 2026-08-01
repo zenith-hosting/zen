@@ -1,13 +1,12 @@
 package zen
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
-func TestConfigWithDefaultsDevUsesZenConfigDefaults(t *testing.T) {
+func TestConfigWithDefaultsDev(t *testing.T) {
 	cfg := Config{
 		Dev: true,
 	}
@@ -25,38 +24,41 @@ func TestConfigWithDefaultsDevUsesZenConfigDefaults(t *testing.T) {
 	if got.RenderTimeout != 5*time.Second {
 		t.Fatalf("expected render timeout 5s, got %s", got.RenderTimeout)
 	}
+	if got.FrontendDir != "frontend" {
+		t.Fatalf("expected default frontend dir, got %q", got.FrontendDir)
+	}
+	if got.DevRendererPort != 5173 {
+		t.Fatalf("expected default dev renderer port, got %d", got.DevRendererPort)
+	}
+	if got.ProdRendererPort != 4174 {
+		t.Fatalf("expected default prod renderer port, got %d", got.ProdRendererPort)
+	}
 }
 
-func TestConfigWithDefaultsUsesZenConfigJSON(t *testing.T) {
+func TestConfigWithDefaultsUsesPublicFields(t *testing.T) {
 	dir := t.TempDir()
-	raw := `{
-		"frontendDir": "web",
-		"devRendererPort": 5273,
-		"prodRendererPort": 4274
-	}`
-
-	if err := os.WriteFile(filepath.Join(dir, "zen.config.json"), []byte(raw), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	dev := Config{
-		Dev:         true,
-		ProjectRoot: dir,
+		Dev:             true,
+		ProjectRoot:     dir,
+		FrontendDir:     "web",
+		DevRendererPort: 5273,
 	}.withDefaults()
 
 	if dev.viteURL != "http://localhost:5273" {
-		t.Fatalf("expected dev vite URL from zen.config.json, got %q", dev.viteURL)
+		t.Fatalf("expected configured dev vite URL, got %q", dev.viteURL)
 	}
 	if dev.renderURL != "http://localhost:5273/__zen/render" {
-		t.Fatalf("expected dev render URL from zen.config.json, got %q", dev.renderURL)
+		t.Fatalf("expected configured dev render URL, got %q", dev.renderURL)
 	}
 	prod := Config{
-		Dev:         false,
-		ProjectRoot: dir,
+		ProjectRoot:      dir,
+		FrontendDir:      "web",
+		ProdRendererPort: 4274,
 	}.withDefaults()
 
 	if prod.renderURL != "http://127.0.0.1:4274/__zen/render" {
-		t.Fatalf("expected prod render URL from zen.config.json, got %q", prod.renderURL)
+		t.Fatalf("expected configured prod render URL, got %q", prod.renderURL)
 	}
 	if prod.clientDist != filepath.Join(dir, "web", "dist", "client") {
 		t.Fatalf("expected client dist from frontend dir, got %q", prod.clientDist)
