@@ -1,49 +1,25 @@
 import http from "node:http";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 import {
-  createHealthResponse,
-  isHealthRequest,
-  isRenderRequest,
   readJSON,
   writeJSON,
   writeRendererError
 } from "./renderer-shared.mjs";
 
-function parseArgs(argv) {
-  const args = {
-    host: "127.0.0.1",
-    port: 4174,
-    entry: "./dist/server/entry-server.js"
-  };
-
-  for (let i = 0; i < argv.length; i++) {
-    const item = argv[i];
-
-    if (item === "--entry") {
-      args.entry = argv[++i] ?? "";
-      continue;
+async function main() {
+  const { values: args } = parseArgs({
+    options: {
+      entry: { type: "string", default: "./dist/server/entry-server.js" },
+      host: { type: "string", default: "127.0.0.1" },
+      port: { type: "string", default: "4174" }
     }
-
-    if (item === "--host") {
-      args.host = argv[++i] ?? "127.0.0.1";
-      continue;
-    }
-
-    if (item === "--port") {
-      args.port = Number(argv[++i] ?? "4174");
-      continue;
-    }
-  }
+  });
+  args.port = Number(args.port);
 
   if (!Number.isInteger(args.port) || args.port <= 0) {
     throw new Error("port must be a positive integer");
   }
-
-  return args;
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
   const entryURL = pathToFileURL(args.entry).href;
   const mod = await import(entryURL);
 
@@ -52,12 +28,12 @@ async function main() {
   }
 
   const server = http.createServer(async (req, res) => {
-    if (isHealthRequest(req)) {
-      writeJSON(res, 200, createHealthResponse("production"));
+    if (req.method === "GET" && req.url === "/__zen/health") {
+      writeJSON(res, 200, { ok: true, mode: "production" });
       return;
     }
 
-    if (isRenderRequest(req)) {
+    if (req.method === "POST" && req.url === "/__zen/render") {
       try {
         const body = await readJSON(req);
         const result = await mod.render(body);

@@ -20,12 +20,6 @@ type documentInput struct {
 	ModuleScriptURLs []string
 }
 
-type islandFragmentInput struct {
-	Island        string
-	HTML          string
-	HydrationJSON string
-}
-
 func renderDocument(input documentInput) string {
 	var b strings.Builder
 
@@ -85,17 +79,17 @@ func hydrationDataScript(json string) string {
 	return `<script id="__ZEN_DATA__" type="application/json">` + json + "</script>"
 }
 
-func renderIslandFragment(input islandFragmentInput) string {
+func renderIslandFragment(island, renderedHTML, hydrationJSON string) string {
 	var b strings.Builder
 
 	b.WriteString(`<div data-zen-island-root>`)
 	b.WriteString(`<div data-zen-island="`)
-	b.WriteString(html.EscapeString(input.Island))
+	b.WriteString(html.EscapeString(island))
 	b.WriteString(`">`)
-	b.WriteString(input.HTML)
+	b.WriteString(renderedHTML)
 	b.WriteString("</div>")
 	b.WriteString(`<script type="application/json" data-zen-island-props>`)
-	b.WriteString(input.HydrationJSON)
+	b.WriteString(hydrationJSON)
 	b.WriteString("</script>")
 	b.WriteString("</div>\n")
 

@@ -59,18 +59,10 @@ func WithBase(attrs ...Attribute) RenderOption {
 	}
 }
 
-func Base(attrs ...Attribute) RenderOption {
-	return WithBase(attrs...)
-}
-
 func WithMeta(attrs ...Attribute) RenderOption {
 	return func(opts *renderOptions) {
 		opts.Meta = append(opts.Meta, newHeadElement("meta", attrs...))
 	}
-}
-
-func Meta(attrs ...Attribute) RenderOption {
-	return WithMeta(attrs...)
 }
 
 func WithLink(attrs ...Attribute) RenderOption {
@@ -79,28 +71,16 @@ func WithLink(attrs ...Attribute) RenderOption {
 	}
 }
 
-func Link(attrs ...Attribute) RenderOption {
-	return WithLink(attrs...)
-}
-
 func WithScript(attrs ...Attribute) RenderOption {
 	return func(opts *renderOptions) {
 		opts.Script = append(opts.Script, newHeadElement("script", attrs...))
 	}
 }
 
-func Script(attrs ...Attribute) RenderOption {
-	return WithScript(attrs...)
-}
-
 func WithStyle(style string) RenderOption {
 	return func(opts *renderOptions) {
 		opts.Style = style
 	}
-}
-
-func Style(style string) RenderOption {
-	return WithStyle(style)
 }
 
 func newHeadElement(tag string, attrs ...Attribute) headElement {

@@ -1,8 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 
 type HomeProps = {
-  title?: string;
-  body?: string;
   counter?: string;
   user?: string;
 };
@@ -55,11 +53,10 @@ export default function Home(props: HomeProps) {
           <div>
             <p className="mb-5 text-sm font-medium text-indigo-300">Small by design.</p>
             <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-6xl">
-              {props.title ?? "Server-rendered Go apps, without the framework ceremony."}
+              Server-rendered Go apps, without the framework ceremony.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-              {props.body ??
-                "Zen keeps Go, Vite, React, and Tailwind working together while staying out of your way."}
+              Zen keeps Go, Vite, React, and Tailwind working together while staying out of your way.
             </p>
 
             <p className="mt-8 text-sm text-zinc-500">Go · Vite · React SSR</p>

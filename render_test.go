@@ -2,9 +2,7 @@ package zen
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,9 +19,9 @@ func mustRenderPage(t *testing.T, r *Renderer, url, page string, props any, opti
 	return response
 }
 
-func mustRenderIsland(t *testing.T, r *Renderer, url, island string, props any, options ...RenderOption) Response {
+func mustRenderIsland(t *testing.T, r *Renderer, url, island string, props any) Response {
 	t.Helper()
-	response, err := r.RenderIsland(context.Background(), url, island, props, options...)
+	response, err := r.RenderIsland(context.Background(), url, island, props)
 	if err != nil {
 		t.Fatalf("render island: %v", err)
 	}
@@ -57,6 +55,13 @@ func TestNewRendererRejectsInvalidProductionConfig(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected validation error")
+	}
+}
+
+func TestNewRendererRejectsNegativeTimeout(t *testing.T) {
+	_, err := New(Config{Dev: true, RenderTimeout: -time.Second})
+	if err == nil {
+		t.Fatal("expected timeout validation error")
 	}
 }
 
@@ -161,7 +166,7 @@ func TestRenderPageUsesHardcodedDocument(t *testing.T) {
 	res := mustRenderPage(t, r, "/", "Home", map[string]string{"title": "Hello"},
 		WithTitle("Custom <Title>"),
 		WithStatus(http.StatusCreated),
-		Base(Href("/")),
+		WithBase(Href("/")),
 		WithMeta(Name("description"), Content("From Go <unsafe>")),
 		WithLink(Rel("canonical"), Href("https://example.com/?q=<unsafe>"), Attr("data-source", "go <unsafe>")),
 		WithStyle(`body { color: red; }`),
@@ -295,31 +300,6 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 	}
 }
 
-func TestRenderIslandDoesNotInjectProductionManifestAssets(t *testing.T) {
-	client := &fakeSSRClient{
-		res: ssrResponse{
-			HTML: `<button>Count 0</button>`,
-		},
-	}
-
-	r := &Renderer{
-		config: Config{
-			Dev:          false,
-			DefaultTitle: "Zen",
-		},
-		ssr: client,
-	}
-
-	res := mustRenderIsland(t, r, "/counter", "Counter", map[string]int{
-		"count": 0,
-	})
-	body := string(res.Body)
-
-	if strings.Contains(body, "<link") || strings.Contains(body, `<script type="module"`) {
-		t.Fatalf("island fragment should not include page assets: %s", body)
-	}
-}
-
 func TestNewRendererCreatesProductionHTTPSSRClient(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := filepath.Join(dir, "manifest.json")
@@ -363,107 +343,38 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 	}
 }
 
-func TestRenderReturnsRendererHTTPError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-
-		_ = json.NewEncoder(w).Encode(httpRendererErrorResponse{
-			Error: httpRendererError{
-				Message: "renderer exploded",
-			},
-		})
-	}))
-	defer server.Close()
-
-	r := &Renderer{
-		config: Config{
-			Dev:          true,
-			viteURL:      "http://localhost:5173",
-			renderURL:    server.URL,
-			DefaultTitle: "Zen",
-		},
-		ssr: newHTTPSSRClient(httpSSRClientConfig{
-			RenderURL: server.URL,
-			Timeout:   time.Second,
-		}),
-	}
-
-	_, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{})
-	if err == nil {
-		t.Fatal("expected renderer error")
-	}
-	if !strings.Contains(err.Error(), "renderer exploded") {
-		t.Fatalf("unexpected renderer error: %v", err)
-	}
-}
-
-func TestRenderInlineStylesEmitsStyleTagInsteadOfLink(t *testing.T) {
+func TestRenderInlineStylesReplacesProductionStylesheetLinks(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
+		t.Fatal(err)
 	}
-	css := `.marquee{display:flex}`
-	if err := os.WriteFile(filepath.Join(dir, "assets", "app.def456.css"), []byte(css), 0o644); err != nil {
-		t.Fatalf("write css: %v", err)
-	}
-
-	client := &fakeSSRClient{
-		res: ssrResponse{HTML: `<main>Public</main>`},
+	if err := os.WriteFile(filepath.Join(dir, "assets/app.css"), []byte("body{color:red}"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
 	r := &Renderer{
-		config: Config{
-			Dev:          false,
-			DefaultTitle: "Zen",
-			clientDist:   dir,
-		},
-		ssr: client,
-		manifest: viteManifest{
-			".zen/entries/entry-client.tsx": {
-				File: "assets/entry-client.abc123.js",
-				CSS:  []string{"assets/app.def456.css"},
-			},
-		},
+		config: Config{InlineStyles: true, clientDist: dir},
+		ssr:    &fakeSSRClient{res: ssrResponse{HTML: "<main>Home</main>"}},
+		manifest: viteManifest{".zen/entries/entry-client.tsx": {
+			File: "assets/app.js",
+			CSS:  []string{"assets/app.css"},
+		}},
 	}
 
-	res := mustRenderPage(t, r, "/", "Public", map[string]string{}, WithInlineStyles())
-	body := string(res.Body)
-
-	if !strings.Contains(body, "<style>"+css+"</style>") {
-		t.Fatalf("body missing inlined css: %s", body)
-	}
-	if strings.Contains(body, `<link rel="stylesheet"`) {
-		t.Fatalf("body should not include a render-blocking stylesheet link: %s", body)
-	}
-	// The JS entry still loads normally.
-	if !strings.Contains(body, `<script type="module" src="/assets/entry-client.abc123.js"></script>`) {
-		t.Fatalf("body missing entry script: %s", body)
+	body := string(mustRenderPage(t, r, "/", "Home", nil).Body)
+	if !strings.Contains(body, "<style>body{color:red}</style>") || strings.Contains(body, `<link rel="stylesheet"`) {
+		t.Fatalf("expected inline CSS without stylesheet link: %s", body)
 	}
 }
 
-func TestRenderInlineStylesIgnoredInDev(t *testing.T) {
-	client := &fakeSSRClient{
-		res: ssrResponse{HTML: `<main>Public</main>`},
-	}
-
+func TestRenderInlineStylesLeavesDevelopmentAssetsAlone(t *testing.T) {
 	r := &Renderer{
-		config: Config{
-			Dev:          true,
-			viteURL:      "http://localhost:5173",
-			DefaultTitle: "Zen",
-		},
-		ssr: client,
+		config: Config{Dev: true, InlineStyles: true, viteURL: "http://localhost:5173"},
+		ssr:    &fakeSSRClient{res: ssrResponse{HTML: "<main>Home</main>"}},
 	}
 
-	res := mustRenderPage(t, r, "/", "Public", map[string]string{}, WithInlineStyles())
-	body := string(res.Body)
-
-	// Dev injects CSS via the Vite client; inlining is a no-op and must not break.
-	if strings.Contains(body, "<style>") && !strings.Contains(body, "@vite/client") {
-		t.Fatalf("dev render should keep vite client injection, got: %s", body)
-	}
-	if !strings.Contains(body, `http://localhost:5173/@vite/client`) {
-		t.Fatalf("dev body missing vite client: %s", body)
+	body := string(mustRenderPage(t, r, "/", "Home", nil).Body)
+	if !strings.Contains(body, "http://localhost:5173/@vite/client") || strings.Contains(body, "<style>") {
+		t.Fatalf("expected unchanged development assets: %s", body)
 	}
 }

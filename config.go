@@ -1,7 +1,6 @@
 package zen
 
 import (
-	"errors"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -9,7 +8,8 @@ import (
 )
 
 type Config struct {
-	Dev bool
+	Dev          bool
+	InlineStyles bool
 
 	RenderTimeout time.Duration
 
@@ -68,33 +68,6 @@ func (c Config) withDefaults() Config {
 	}
 
 	return c
-}
-
-func (c Config) validate() error {
-	if strings.TrimSpace(c.renderURL) == "" {
-		return errors.New("zen: RenderURL is required")
-	}
-
-	if c.RenderTimeout <= 0 {
-		return errors.New("zen: RenderTimeout must be greater than zero")
-	}
-
-	if c.Dev {
-		if strings.TrimSpace(c.viteURL) == "" {
-			return errors.New("zen: ViteURL is required in dev mode")
-		}
-		return nil
-	}
-
-	if strings.TrimSpace(c.clientDist) == "" {
-		return errors.New("zen: ClientDist is required in production mode")
-	}
-
-	if strings.TrimSpace(c.manifest) == "" {
-		return errors.New("zen: Manifest is required in production mode")
-	}
-
-	return nil
 }
 
 func intString(value int) string {

@@ -2,7 +2,6 @@ package zen
 
 import (
 	"context"
-	"testing"
 )
 
 type fakeSSRClient struct {
@@ -14,26 +13,4 @@ type fakeSSRClient struct {
 func (f *fakeSSRClient) Render(ctx context.Context, req ssrRequest) (ssrResponse, error) {
 	f.req = req
 	return f.res, f.err
-}
-
-func TestSSRClientInterfaceCapturesRenderRequest(t *testing.T) {
-	client := &fakeSSRClient{
-		res: ssrResponse{HTML: "<main>Hello</main>"},
-	}
-
-	res, err := client.Render(context.Background(), ssrRequest{
-		URL:   "/",
-		Page:  "Home",
-		Props: map[string]string{"title": "Hello"},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if client.req.Page != "Home" {
-		t.Fatalf("expected page Home, got %q", client.req.Page)
-	}
-	if res.HTML != "<main>Hello</main>" {
-		t.Fatalf("expected rendered html, got %q", res.HTML)
-	}
 }

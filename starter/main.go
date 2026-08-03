@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/zenith-hosting/zen"
 )
@@ -19,17 +18,15 @@ func main() {
 	}
 
 	cfg := zen.Config{
-		Dev:           dev,
-		DefaultTitle:  "Zen App",
-		RenderTimeout: 5 * time.Second,
+		Dev:          dev,
+		InlineStyles: true,
+		DefaultTitle: "Zen App",
 	}
 
 	renderer, err := zen.New(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer renderer.Close()
-
 	log.Fatal(http.ListenAndServe(port, routes(renderer)))
 }
 
@@ -47,29 +44,25 @@ func routes(renderer *zen.Renderer) http.Handler {
 		send(w, response, err)
 	})
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.RequestURI()
-		props := map[string]any{"url": url}
+		counter, err := renderer.RenderIsland(r.Context(), url, "Counter", map[string]any{"count": 0})
+		if err != nil {
+			send(w, zen.Response{}, err)
+			return
+		}
+		props := map[string]string{"counter": string(counter.Body)}
 
-		if r.URL.Path == "/" {
-			counter, err := renderer.RenderIsland(r.Context(), url, "Counter", map[string]any{"count": 0})
+		if name := strings.TrimSpace(r.URL.Query().Get("name")); name != "" {
+			user, err := renderer.RenderIsland(r.Context(), url, "User", map[string]string{"name": name})
 			if err != nil {
 				send(w, zen.Response{}, err)
 				return
 			}
-			props["counter"] = string(counter.Body)
-
-			if name := strings.TrimSpace(r.URL.Query().Get("name")); name != "" {
-				user, err := renderer.RenderIsland(r.Context(), url, "User", map[string]any{"name": name})
-				if err != nil {
-					send(w, zen.Response{}, err)
-					return
-				}
-				props["user"] = string(user.Body)
-			}
+			props["user"] = string(user.Body)
 		}
 
-		response, err := renderer.RenderPage(r.Context(), url, "App", props, zen.WithTitle("Zen App"))
+		response, err := renderer.RenderPage(r.Context(), url, "Home", props)
 		send(w, response, err)
 	})
 

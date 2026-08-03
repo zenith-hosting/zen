@@ -1,65 +1,36 @@
 import http from "node:http";
+import { parseArgs } from "node:util";
 import { createServer as createViteServer } from "vite";
 import {
-  createHealthResponse,
-  isHealthRequest,
-  isRenderRequest,
   readJSON,
   writeJSON,
   writeRendererError
 } from "./renderer-shared.mjs";
 
-function parseArgs(argv) {
-  const args = {
-    root: process.cwd(),
-    entry: "/.zen/entries/entry-server.tsx",
-    host: "127.0.0.1",
-    port: 5173
-  };
-
-  for (let i = 0; i < argv.length; i++) {
-    const item = argv[i];
-
-    if (item === "--root") {
-      args.root = argv[++i] ?? process.cwd();
-      continue;
+async function main() {
+  const { values: args } = parseArgs({
+    options: {
+      root: { type: "string", default: process.cwd() },
+      entry: { type: "string", default: "/.zen/entries/entry-server.tsx" },
+      host: { type: "string", default: "127.0.0.1" },
+      port: { type: "string", default: "5173" }
     }
-
-    if (item === "--entry") {
-      args.entry = argv[++i] ?? "/.zen/entries/entry-server.tsx";
-      continue;
-    }
-
-    if (item === "--host") {
-      args.host = argv[++i] ?? "127.0.0.1";
-      continue;
-    }
-
-    if (item === "--port") {
-      args.port = Number(argv[++i] ?? "5173");
-      continue;
-    }
-  }
+  });
+  args.port = Number(args.port);
 
   if (!Number.isInteger(args.port) || args.port <= 0) {
     throw new Error("port must be a positive integer");
   }
 
-  return args;
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-
   let vite;
 
   const server = http.createServer(async (req, res) => {
-    if (isHealthRequest(req)) {
-      writeJSON(res, 200, createHealthResponse("dev"));
+    if (req.method === "GET" && req.url === "/__zen/health") {
+      writeJSON(res, 200, { ok: true, mode: "dev" });
       return;
     }
 
-    if (isRenderRequest(req)) {
+    if (req.method === "POST" && req.url === "/__zen/render") {
       try {
         const body = await readJSON(req);
         const mod = await vite.ssrLoadModule(args.entry);

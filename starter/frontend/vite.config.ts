@@ -11,10 +11,5 @@ export default defineConfig({
         client: path.resolve(__dirname, ".zen/entries/entry-client.tsx")
       }
     }
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src")
-    }
   }
 });

@@ -28,18 +28,3 @@ export function writeRendererError(res, status, error, options = {}) {
     }
   });
 }
-
-export function createHealthResponse(mode) {
-  return {
-    ok: true,
-    mode
-  };
-}
-
-export function isRenderRequest(req) {
-  return req.method === "POST" && req.url === "/__zen/render";
-}
-
-export function isHealthRequest(req) {
-  return req.method === "GET" && req.url === "/__zen/health";
-}

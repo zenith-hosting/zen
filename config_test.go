@@ -83,25 +83,3 @@ func TestConfigWithDefaultsProduction(t *testing.T) {
 		t.Fatalf("expected render timeout 5s, got %s", got.RenderTimeout)
 	}
 }
-
-func TestConfigValidateProductionRequiresPaths(t *testing.T) {
-	cfg := Config{
-		Dev: false,
-	}
-
-	err := cfg.withDefaults().validate()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestConfigValidateRequiresRenderURL(t *testing.T) {
-	cfg := Config{
-		Dev: true,
-	}
-
-	err := cfg.withDefaults().validate()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}

@@ -32,29 +32,18 @@ type Response struct {
 type RenderOption func(*renderOptions)
 
 type renderOptions struct {
-	Title        string
-	Status       int
-	Base         []headElement
-	Meta         []headElement
-	Link         []headElement
-	Script       []headElement
-	Style        string
-	InlineStyles bool
+	Title  string
+	Status int
+	Base   []headElement
+	Meta   []headElement
+	Link   []headElement
+	Script []headElement
+	Style  string
 }
 
 func WithTitle(title string) RenderOption {
 	return func(opts *renderOptions) {
 		opts.Title = title
-	}
-}
-
-// WithInlineStyles emits this render's stylesheet(s) inline in a <style> tag rather
-// than as a render-blocking <link>, collapsing the CSS request out of the critical
-// path. Production only: in dev the CSS is injected by the Vite client, so a dev
-// render ignores this and keeps the normal dev asset injection.
-func WithInlineStyles() RenderOption {
-	return func(opts *renderOptions) {
-		opts.InlineStyles = true
 	}
 }
 
@@ -66,16 +55,13 @@ func WithStatus(status int) RenderOption {
 
 func New(config Config) (*Renderer, error) {
 	cfg := config.withDefaults()
-	if err := cfg.validate(); err != nil {
-		return nil, err
+	if cfg.RenderTimeout <= 0 {
+		return nil, errors.New("zen: RenderTimeout must be greater than zero")
 	}
 
 	r := &Renderer{
 		config: cfg,
-		ssr: newHTTPSSRClient(httpSSRClientConfig{
-			RenderURL: cfg.renderURL,
-			Timeout:   cfg.RenderTimeout,
-		}),
+		ssr:    newHTTPSSRClient(cfg.renderURL, cfg.RenderTimeout),
 	}
 
 	if !cfg.Dev {
@@ -132,11 +118,8 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 		return Response{}, err
 	}
 
-	// Inline the compiled CSS into a <style> instead of a <link> when asked (prod
-	// only) — reads the same manifest-resolved files zen would otherwise link, so
-	// there's no extra render-blocking CSS request on the critical path.
 	var compiledCSS string
-	if opts.InlineStyles && !r.config.Dev {
+	if r.config.InlineStyles && !r.config.Dev {
 		compiledCSS, err = r.readStyles(assets.Styles)
 		if err != nil {
 			return Response{}, err
@@ -168,15 +151,7 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 	}, nil
 }
 
-func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props any, options ...RenderOption) (Response, error) {
-	opts := renderOptions{
-		Status: http.StatusOK,
-	}
-
-	for _, option := range options {
-		option(&opts)
-	}
-
+func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props any) (Response, error) {
 	if r.ssr == nil {
 		return Response{}, errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
 	}
@@ -206,14 +181,10 @@ func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props a
 		return Response{}, err
 	}
 
-	fragment := renderIslandFragment(islandFragmentInput{
-		Island:        island,
-		HTML:          res.HTML,
-		HydrationJSON: hydrationJSON,
-	})
+	fragment := renderIslandFragment(island, res.HTML, hydrationJSON)
 
 	return Response{
-		Status:      opts.Status,
+		Status:      http.StatusOK,
 		ContentType: htmlContentType,
 		Body:        []byte(fragment),
 	}, nil
@@ -236,16 +207,10 @@ func (r *Renderer) clientEntryAssets() (clientAssets, []string, error) {
 	return assets, nil, nil
 }
 
-// readStyles reads the given manifest CSS asset paths (e.g. "/assets/app.<hash>.css")
-// from the production client-dist directory and returns their concatenated contents,
-// for inlining into a <style> tag. The paths are the same href values zen otherwise
-// emits as <link rel="stylesheet">.
 func (r *Renderer) readStyles(styles []string) (string, error) {
 	var b strings.Builder
-
 	for _, href := range styles {
-		rel := strings.TrimPrefix(href, "/")
-		raw, err := os.ReadFile(filepath.Join(r.config.clientDist, rel))
+		raw, err := os.ReadFile(filepath.Join(r.config.clientDist, strings.TrimPrefix(href, "/")))
 		if err != nil {
 			return "", fmt.Errorf("zen: read inline stylesheet %s: %w", href, err)
 		}
@@ -254,10 +219,5 @@ func (r *Renderer) readStyles(styles []string) (string, error) {
 		}
 		b.Write(raw)
 	}
-
 	return b.String(), nil
-}
-
-func (r *Renderer) Close() error {
-	return nil
 }

@@ -44,6 +44,7 @@ func main() {
 	dev := os.Getenv("ZEN_ENV") != "prod"
 	renderer, err := zen.New(zen.Config{
 		Dev:              dev,
+		InlineStyles:     true,
 		FrontendDir:      "frontend",
 		DevRendererPort:  5173,
 		ProdRendererPort: 4174,
@@ -53,8 +54,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer renderer.Close()
-
 	mux := http.NewServeMux()
 	if !dev {
 		mux.Handle("/assets/", http.StripPrefix(
@@ -63,14 +62,12 @@ func main() {
 		))
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, request *http.Request) {
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, request *http.Request) {
 		response, err := renderer.RenderPage(
 			request.Context(),
 			request.URL.RequestURI(),
-			"App",
-			map[string]any{
-				"url": request.URL.RequestURI(),
-			},
+			"Home",
+			map[string]any{},
 			zen.WithTitle("Home"),
 			zen.WithMeta(zen.Name("description"), zen.Content("Zen app home page")),
 			zen.WithLink(zen.Rel("canonical"), zen.Href("https://example.com/")),
@@ -113,15 +110,13 @@ response, err := renderer.RenderPage(ctx, url, "Home", props,
 )
 ```
 
-Short aliases such as `zen.Base(...)`, `zen.Meta(...)`, and `zen.Link(...)` are also available.
-
 `RenderIsland` returns an SSR fragment that the client entry hydrates as an independent React root. Islands can be included in the initial page props or fetched and inserted later; a `MutationObserver` hydrates newly inserted fragments.
 
 ```go
 counter, err := renderer.RenderIsland(ctx, url, "Counter", map[string]any{"count": 0})
 ```
 
-In production, Zen reads client scripts and styles from Vite's manifest. Serve `renderer.AssetsDir()` at `/assets/`. Pass `zen.WithInlineStyles()` to `RenderPage` only when you deliberately want the compiled CSS embedded in the document instead of linked.
+In production, Zen reads client scripts and styles from Vite's manifest. Serve `renderer.AssetsDir()` at `/assets/`. Set `InlineStyles: true` in `zen.Config` when you want compiled CSS embedded in every rendered page instead of linked.
 
 ## Project workflow
 

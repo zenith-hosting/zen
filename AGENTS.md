@@ -324,7 +324,7 @@ Do not change these IDs without also changing the hydration entry and tests.
 
 `RenderIsland` is intentionally separate. It returns a hydratable fragment from `renderIslandFragment` and never assembles a full document.
 
-`WithInlineStyles` is production-only. It reads the manifest-resolved compiled CSS and emits it in a `<style>` element instead of stylesheet links. Development CSS remains owned by Vite.
+`Config.InlineStyles` is production-only. When enabled, Zen reads the manifest-resolved compiled CSS and emits it in a `<style>` element instead of stylesheet links for every page. Development CSS remains owned by Vite.
 
 When changing document behavior, update:
 

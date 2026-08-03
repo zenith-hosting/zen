@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-type httpSSRClientConfig struct {
-	RenderURL string
-	Timeout   time.Duration
-}
-
 type httpSSRClient struct {
 	renderURL string
 	client    *http.Client
@@ -26,27 +21,12 @@ type httpRendererErrorResponse struct {
 
 type httpRendererError struct {
 	Message string `json:"message"`
-	Stack   string `json:"stack,omitempty"`
 }
 
-func newHTTPSSRClient(config httpSSRClientConfig) *httpSSRClient {
-	timeout := config.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Second
-	}
-
-	transport := &http.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 100,
-		IdleConnTimeout:     90 * time.Second,
-	}
-
+func newHTTPSSRClient(renderURL string, timeout time.Duration) *httpSSRClient {
 	return &httpSSRClient{
-		renderURL: config.RenderURL,
-		client: &http.Client{
-			Timeout:   timeout,
-			Transport: transport,
-		},
+		renderURL: renderURL,
+		client:    &http.Client{Timeout: timeout},
 	}
 }
 

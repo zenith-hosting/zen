@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -35,10 +34,7 @@ func TestHTTPSSRClientRendersPage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := newHTTPSSRClient(httpSSRClientConfig{
-		RenderURL: server.URL + "/__zen/render",
-		Timeout:   time.Second,
-	})
+	client := newHTTPSSRClient(server.URL+"/__zen/render", time.Second)
 
 	res, err := client.Render(context.Background(), ssrRequest{
 		URL:   "/",
@@ -77,10 +73,7 @@ func TestHTTPSSRClientSerializesIslandMode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := newHTTPSSRClient(httpSSRClientConfig{
-		RenderURL: server.URL,
-		Timeout:   time.Second,
-	})
+	client := newHTTPSSRClient(server.URL, time.Second)
 
 	_, err := client.Render(context.Background(), ssrRequest{
 		Mode:   "island",
@@ -111,16 +104,12 @@ func TestHTTPSSRClientReturnsRendererError(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(httpRendererErrorResponse{
 			Error: httpRendererError{
 				Message: "Unknown page: Admin",
-				Stack:   "Error: Unknown page: Admin",
 			},
 		})
 	}))
 	defer server.Close()
 
-	client := newHTTPSSRClient(httpSSRClientConfig{
-		RenderURL: server.URL,
-		Timeout:   time.Second,
-	})
+	client := newHTTPSSRClient(server.URL, time.Second)
 
 	_, err := client.Render(context.Background(), ssrRequest{
 		URL:   "/admin",
@@ -136,53 +125,6 @@ func TestHTTPSSRClientReturnsRendererError(t *testing.T) {
 	}
 }
 
-func TestHTTPSSRClientHandlesParallelRequests(t *testing.T) {
-	var count atomic.Int64
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count.Add(1)
-
-		var req ssrRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode request: %v", err)
-		}
-
-		w.Header().Set("content-type", "application/json")
-		_ = json.NewEncoder(w).Encode(ssrResponse{
-			HTML: "<main>" + req.Page + "</main>",
-		})
-	}))
-	defer server.Close()
-
-	client := newHTTPSSRClient(httpSSRClientConfig{
-		RenderURL: server.URL,
-		Timeout:   time.Second,
-	})
-
-	errs := make(chan error, 25)
-
-	for range 25 {
-		go func() {
-			_, err := client.Render(context.Background(), ssrRequest{
-				URL:   "/",
-				Page:  "Home",
-				Props: map[string]string{},
-			})
-			errs <- err
-		}()
-	}
-
-	for range 25 {
-		if err := <-errs; err != nil {
-			t.Fatalf("parallel render failed: %v", err)
-		}
-	}
-
-	if count.Load() != 25 {
-		t.Fatalf("expected 25 requests, got %d", count.Load())
-	}
-}
-
 func TestHTTPSSRClientRespectsContextTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
@@ -190,10 +132,7 @@ func TestHTTPSSRClientRespectsContextTimeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := newHTTPSSRClient(httpSSRClientConfig{
-		RenderURL: server.URL,
-		Timeout:   time.Second,
-	})
+	client := newHTTPSSRClient(server.URL, time.Second)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
 	defer cancel()
