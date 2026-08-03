@@ -4,6 +4,9 @@ Zen is tiny glue for building server-rendered Go apps with any Go HTTP framework
 
 It does not replace those tools. It keeps your HTTP framework in charge of requests and responses, Vite in charge of frontend builds and dev behavior, React in charge of components and hydration, Tailwind in charge of styling, and Air in charge of Go hot reload.
 
+> [!WARNING]
+> Zen is very experimental. Breaking changes WILL happen. Proceed with caution.
+
 ## Install
 
 Use the library from Go apps:
