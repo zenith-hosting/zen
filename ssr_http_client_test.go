@@ -37,7 +37,6 @@ func TestHTTPSSRClientRendersPage(t *testing.T) {
 	client := newHTTPSSRClient(server.URL+"/__zen/render", time.Second)
 
 	res, err := client.Render(context.Background(), ssrRequest{
-		URL:   "/",
 		Page:  "Home",
 		Props: map[string]string{"title": "Hello"},
 	})
@@ -77,7 +76,6 @@ func TestHTTPSSRClientSerializesIslandMode(t *testing.T) {
 
 	_, err := client.Render(context.Background(), ssrRequest{
 		Mode:   "island",
-		URL:    "/counter",
 		Island: "Counter",
 		Props:  map[string]int{"count": 0},
 	})
@@ -112,7 +110,6 @@ func TestHTTPSSRClientReturnsRendererError(t *testing.T) {
 	client := newHTTPSSRClient(server.URL, time.Second)
 
 	_, err := client.Render(context.Background(), ssrRequest{
-		URL:   "/admin",
 		Page:  "Admin",
 		Props: map[string]string{},
 	})
@@ -138,7 +135,6 @@ func TestHTTPSSRClientRespectsContextTimeout(t *testing.T) {
 	defer cancel()
 
 	_, err := client.Render(ctx, ssrRequest{
-		URL:   "/",
 		Page:  "Home",
 		Props: map[string]string{},
 	})

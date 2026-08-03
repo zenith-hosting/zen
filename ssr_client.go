@@ -8,7 +8,6 @@ type ssrClient interface {
 
 type ssrRequest struct {
 	Mode             string `json:"mode,omitempty"`
-	URL              string `json:"url"`
 	Page             string `json:"page,omitempty"`
 	Island           string `json:"island,omitempty"`
 	IdentifierPrefix string `json:"identifierPrefix,omitempty"`

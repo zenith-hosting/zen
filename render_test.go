@@ -10,18 +10,18 @@ import (
 	"time"
 )
 
-func mustRenderPage(t *testing.T, r *Renderer, url, page string, props any, options ...RenderOption) Response {
+func mustRenderPage(t *testing.T, r *Renderer, page string, props any, options ...RenderOption) Response {
 	t.Helper()
-	response, err := r.RenderPage(context.Background(), url, page, props, options...)
+	response, err := r.RenderPage(context.Background(), page, props, options...)
 	if err != nil {
 		t.Fatalf("render page: %v", err)
 	}
 	return response
 }
 
-func mustRenderIsland(t *testing.T, r *Renderer, url, island string, props any) Response {
+func mustRenderIsland(t *testing.T, r *Renderer, island string, props any) Response {
 	t.Helper()
-	response, err := r.RenderIsland(context.Background(), url, island, props)
+	response, err := r.RenderIsland(context.Background(), island, props)
 	if err != nil {
 		t.Fatalf("render island: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestRenderReturnsSSRDocument(t *testing.T) {
 		ssr: client,
 	}
 
-	res, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{
+	res, err := r.RenderPage(context.Background(), "Home", map[string]string{
 		"title": "Hello",
 	})
 	if err != nil {
@@ -122,7 +122,7 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 		ssr: client,
 	}
 
-	res := mustRenderPage(t, r, "/users?active=true", "Home", map[string]string{
+	res := mustRenderPage(t, r, "Home", map[string]string{
 		"title": "Hello",
 	})
 
@@ -134,9 +134,6 @@ func TestRenderPageSendsPageModeToRenderer(t *testing.T) {
 	}
 	if client.req.Page != "Home" {
 		t.Fatalf("expected page Home, got %q", client.req.Page)
-	}
-	if client.req.URL != "/users?active=true" {
-		t.Fatalf("expected original URL, got %q", client.req.URL)
 	}
 	if client.req.IdentifierPrefix != "zen-page-" {
 		t.Fatalf("expected page identifier prefix, got %q", client.req.IdentifierPrefix)
@@ -163,7 +160,7 @@ func TestRenderPageUsesHardcodedDocument(t *testing.T) {
 		ssr: client,
 	}
 
-	res := mustRenderPage(t, r, "/", "Home", map[string]string{"title": "Hello"},
+	res := mustRenderPage(t, r, "Home", map[string]string{"title": "Hello"},
 		WithTitle("Custom <Title>"),
 		WithStatus(http.StatusCreated),
 		WithBase(Href("/")),
@@ -213,7 +210,7 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 		ssr: client,
 	}
 
-	res := mustRenderIsland(t, r, "/counter", "Counter", map[string]int{
+	res := mustRenderIsland(t, r, "Counter", map[string]int{
 		"count": 0,
 	})
 	body := string(res.Body)
@@ -246,9 +243,6 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 	if client.req.Island != "Counter" {
 		t.Fatalf("expected island Counter, got %q", client.req.Island)
 	}
-	if client.req.URL != "/counter" {
-		t.Fatalf("expected original URL, got %q", client.req.URL)
-	}
 	firstPrefix := client.req.IdentifierPrefix
 	if firstPrefix == "" {
 		t.Fatal("expected island identifier prefix")
@@ -257,7 +251,7 @@ func TestRenderIslandWritesHydratableFragment(t *testing.T) {
 		t.Fatalf("island fragment missing identifier prefix: %s", body)
 	}
 
-	mustRenderIsland(t, r, "/counter", "Counter", map[string]int{"count": 1})
+	mustRenderIsland(t, r, "Counter", map[string]int{"count": 1})
 	if client.req.IdentifierPrefix == firstPrefix {
 		t.Fatalf("expected unique island identifier prefixes, got %q", firstPrefix)
 	}
@@ -284,7 +278,7 @@ func TestRenderInjectsProductionManifestAssets(t *testing.T) {
 		},
 	}
 
-	res := mustRenderPage(t, r, "/", "Home", map[string]string{
+	res := mustRenderPage(t, r, "Home", map[string]string{
 		"title": "Production",
 	})
 	body := string(res.Body)
@@ -337,7 +331,7 @@ func TestRenderReturnsErrorWhenSSRClientMissing(t *testing.T) {
 		ssr: nil,
 	}
 
-	_, err := r.RenderPage(context.Background(), "/", "Home", map[string]string{})
+	_, err := r.RenderPage(context.Background(), "Home", map[string]string{})
 	if err == nil {
 		t.Fatal("expected missing ssr client error")
 	}
@@ -361,7 +355,7 @@ func TestRenderInlineStylesReplacesProductionStylesheetLinks(t *testing.T) {
 		}},
 	}
 
-	body := string(mustRenderPage(t, r, "/", "Home", nil).Body)
+	body := string(mustRenderPage(t, r, "Home", nil).Body)
 	if !strings.Contains(body, "<style>body{color:red}</style>") || strings.Contains(body, `<link rel="stylesheet"`) {
 		t.Fatalf("expected inline CSS without stylesheet link: %s", body)
 	}
@@ -373,7 +367,7 @@ func TestRenderInlineStylesLeavesDevelopmentAssetsAlone(t *testing.T) {
 		ssr:    &fakeSSRClient{res: ssrResponse{HTML: "<main>Home</main>"}},
 	}
 
-	body := string(mustRenderPage(t, r, "/", "Home", nil).Body)
+	body := string(mustRenderPage(t, r, "Home", nil).Body)
 	if !strings.Contains(body, "http://localhost:5173/@vite/client") || strings.Contains(body, "<style>") {
 		t.Fatalf("expected unchanged development assets: %s", body)
 	}

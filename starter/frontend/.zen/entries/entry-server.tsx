@@ -7,7 +7,6 @@ type ComponentModule = {
 
 type RenderRequest = {
   mode?: "page" | "island";
-  url: string;
   page?: string;
   island?: string;
   identifierPrefix?: string;

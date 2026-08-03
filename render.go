@@ -75,7 +75,7 @@ func New(config Config) (*Renderer, error) {
 	return r, nil
 }
 
-func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, options ...RenderOption) (Response, error) {
+func (r *Renderer) RenderPage(ctx context.Context, page string, props any, options ...RenderOption) (Response, error) {
 	opts := renderOptions{
 		Title:  r.config.DefaultTitle,
 		Status: http.StatusOK,
@@ -95,7 +95,6 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 
 	res, err := r.ssr.Render(ctx, ssrRequest{
 		Mode:             "page",
-		URL:              url,
 		Page:             page,
 		IdentifierPrefix: pageIdentifierPrefix,
 		Props:            props,
@@ -151,7 +150,7 @@ func (r *Renderer) RenderPage(ctx context.Context, url, page string, props any, 
 	}, nil
 }
 
-func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props any) (Response, error) {
+func (r *Renderer) RenderIsland(ctx context.Context, island string, props any) (Response, error) {
 	if r.ssr == nil {
 		return Response{}, errors.New("zen: renderer has no SSR client; configure RenderURL or inject an SSR client in tests")
 	}
@@ -163,7 +162,6 @@ func (r *Renderer) RenderIsland(ctx context.Context, url, island string, props a
 	identifierPrefix := fmt.Sprintf("zen-island-%d-", r.islandIdentifier.Add(1))
 	res, err := r.ssr.Render(ctx, ssrRequest{
 		Mode:             "island",
-		URL:              url,
 		Island:           island,
 		IdentifierPrefix: identifierPrefix,
 		Props:            props,

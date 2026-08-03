@@ -175,7 +175,7 @@ Zen should not wrap the selected HTTP framework into a second routing framework.
 Good:
 
 ```go
-response, err := renderer.RenderPage(ctx, url, "Home", props)
+response, err := renderer.RenderPage(ctx, "Home", props)
 ```
 
 Bad:
@@ -294,7 +294,7 @@ The client entry hydrates the page once, hydrates every island as an independent
 Go-owned head elements should use the structured render options:
 
 ```go
-renderer.RenderPage(ctx, url, "Home", props,
+renderer.RenderPage(ctx, "Home", props,
 	zen.WithTitle("Home"),
 	zen.WithBase(zen.Href("/")),
 	zen.WithMeta(zen.Name("description"), zen.Content("Page description")),
@@ -359,7 +359,6 @@ Render request:
 ```json
 {
   "mode": "page",
-  "url": "/users/42",
   "page": "User",
   "identifierPrefix": "zen-page-",
   "props": {
@@ -539,7 +538,7 @@ small over complete
 Zen should make this workflow pleasant:
 
 ```go
-response, err := renderer.RenderPage(ctx, url, "Home", props)
+response, err := renderer.RenderPage(ctx, "Home", props)
 ```
 
 Not replace it with a shiny proprietary lifecycle.

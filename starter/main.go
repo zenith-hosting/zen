@@ -40,13 +40,12 @@ func routes(renderer *zen.Renderer) http.Handler {
 			return
 		}
 
-		response, err := renderer.RenderIsland(r.Context(), r.URL.RequestURI(), "User", map[string]any{"name": name})
+		response, err := renderer.RenderIsland(r.Context(), "User", map[string]any{"name": name})
 		send(w, response, err)
 	})
 
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		url := r.URL.RequestURI()
-		counter, err := renderer.RenderIsland(r.Context(), url, "Counter", map[string]any{"count": 0})
+		counter, err := renderer.RenderIsland(r.Context(), "Counter", map[string]any{"count": 0})
 		if err != nil {
 			send(w, zen.Response{}, err)
 			return
@@ -54,7 +53,7 @@ func routes(renderer *zen.Renderer) http.Handler {
 		props := map[string]string{"counter": string(counter.Body)}
 
 		if name := strings.TrimSpace(r.URL.Query().Get("name")); name != "" {
-			user, err := renderer.RenderIsland(r.Context(), url, "User", map[string]string{"name": name})
+			user, err := renderer.RenderIsland(r.Context(), "User", map[string]string{"name": name})
 			if err != nil {
 				send(w, zen.Response{}, err)
 				return
@@ -62,7 +61,7 @@ func routes(renderer *zen.Renderer) http.Handler {
 			props["user"] = string(user.Body)
 		}
 
-		response, err := renderer.RenderPage(r.Context(), url, "Home", props)
+		response, err := renderer.RenderPage(r.Context(), "Home", props)
 		send(w, response, err)
 	})
 
